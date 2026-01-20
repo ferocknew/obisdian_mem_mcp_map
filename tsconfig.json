@@ -20,5 +20,9 @@
   },
   "include": [
     "**/*.ts"
+  ],
+  "exclude": [
+    "demo.ts",
+    "node_modules"
   ]
 }
