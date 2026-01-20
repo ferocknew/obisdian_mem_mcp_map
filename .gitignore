@@ -1,0 +1,19 @@
+# 构建产物
+main.js
+*.map
+
+# Node modules
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# demo 目录
+/demo/
+/.claude/
+/.env

@@ -1,0 +1,9 @@
+{
+	"id": "memory-graph",
+	"name": "Memory Graph",
+	"version": "0.1.0",
+	"minAppVersion": "0.15.0",
+	"description": "本地记忆图谱插件，支持与 MCP 服务器交互",
+	"author": "ferock",
+	"isDesktopOnly": false
+}
