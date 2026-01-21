@@ -1,4 +1,4 @@
-import { Plugin, Notice, WorkspaceLeaf } from 'obsidian';
+import { Plugin, Notice, WorkspaceLeaf, Menu, TFile, TFolder, Editor, MarkdownView } from 'obsidian';
 import { DEFAULT_SETTINGS, MemoryGraphSettings, MemoryGraphSettingTab } from './settings';
 import { MemorySearchView, VIEW_TYPE_MEMORY_SEARCH } from './search_view';
 
@@ -45,6 +45,50 @@ export default class MemoryGraphPlugin extends Plugin {
 				new Notice('请使用命令面板中的 "Reload plugins without reloading app"');
 			}
 		});
+
+		// 注册编辑器右键菜单
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
+				menu.addItem((item) => {
+					item
+						.setTitle('分析并上传到记忆图谱系统')
+						.setIcon('brain-circuit')
+						.onClick(async () => {
+							await this.analyzeAndUploadFromEditor(editor, view);
+						});
+				});
+			})
+		);
+
+		// 注册文件右键菜单
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu: Menu, file: TFile) => {
+				menu.addItem((item) => {
+					item
+						.setTitle('分析并上传到记忆图谱系统')
+						.setIcon('brain-circuit')
+						.onClick(async () => {
+							await this.analyzeAndUploadFile(file);
+						});
+				});
+			})
+		);
+
+		// 注册文件夹右键菜单
+		this.registerEvent(
+			this.app.workspace.on('files-menu', (menu: Menu, file: TFile | TFolder) => {
+				if (file instanceof TFolder) {
+					menu.addItem((item) => {
+						item
+							.setTitle('分析并上传到记忆图谱系统')
+							.setIcon('brain-circuit')
+							.onClick(async () => {
+								await this.analyzeAndUploadFolder(file);
+							});
+					});
+				}
+			})
+		);
 	}
 
 	onunload() {
@@ -78,6 +122,99 @@ export default class MemoryGraphPlugin extends Plugin {
 		if (leaf) {
 			workspace.revealLeaf(leaf);
 		}
+	}
+
+	/**
+	 * 从编辑器分析并上传内容
+	 */
+	async analyzeAndUploadFromEditor(editor: Editor, view: MarkdownView) {
+		console.log('[Context Menu] 从编辑器分析并上传');
+
+		const selection = editor.getSelection();
+		const content = selection || editor.getValue();
+
+		if (!content.trim()) {
+			new Notice('没有可分析的内容');
+			return;
+		}
+
+		new Notice('分析并上传功能开发中...');
+		console.log('[Context Menu] 待分析内容长度:', content.length);
+		console.log('[Context Menu] 文件路径:', view.file?.path);
+
+		// TODO: 实现分析和上传逻辑
+		// 1. 调用 LLM 分析内容，提取实体、关系、观察
+		// 2. 调用 API Client 上传到记忆图谱系统
+	}
+
+	/**
+	 * 分析并上传单个文件
+	 */
+	async analyzeAndUploadFile(file: TFile) {
+		console.log('[Context Menu] 分析并上传文件:', file.path);
+
+		try {
+			const content = await this.app.vault.read(file);
+
+			if (!content.trim()) {
+				new Notice('文件内容为空');
+				return;
+			}
+
+			new Notice(`正在分析文件: ${file.name}`);
+			console.log('[Context Menu] 文件内容长度:', content.length);
+
+			// TODO: 实现分析和上传逻辑
+			// 1. 调用 LLM 分析文件内容
+			// 2. 提取实体、关系、观察
+			// 3. 上传到记忆图谱系统
+
+			new Notice('分析并上传功能开发中...');
+		} catch (error) {
+			console.error('[Context Menu] 读取文件失败:', error);
+			new Notice('读取文件失败');
+		}
+	}
+
+	/**
+	 * 分析并上传文件夹中的所有文件
+	 */
+	async analyzeAndUploadFolder(folder: TFolder) {
+		console.log('[Context Menu] 分析并上传文件夹:', folder.path);
+
+		const files = this.getMarkdownFilesInFolder(folder);
+
+		if (files.length === 0) {
+			new Notice('文件夹中没有 Markdown 文件');
+			return;
+		}
+
+		new Notice(`找到 ${files.length} 个文件，准备分析...`);
+		console.log('[Context Menu] 文件列表:', files.map(f => f.path));
+
+		// TODO: 实现批量分析和上传逻辑
+		// 1. 遍历所有文件
+		// 2. 对每个文件调用 LLM 分析
+		// 3. 批量上传到记忆图谱系统
+
+		new Notice('分析并上传功能开发中...');
+	}
+
+	/**
+	 * 递归获取文件夹中的所有 Markdown 文件
+	 */
+	private getMarkdownFilesInFolder(folder: TFolder): TFile[] {
+		const files: TFile[] = [];
+
+		for (const child of folder.children) {
+			if (child instanceof TFile && child.extension === 'md') {
+				files.push(child);
+			} else if (child instanceof TFolder) {
+				files.push(...this.getMarkdownFilesInFolder(child));
+			}
+		}
+
+		return files;
 	}
 
 	async loadSettings() {

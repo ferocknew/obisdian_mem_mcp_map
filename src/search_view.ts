@@ -297,11 +297,28 @@ export class MemorySearchView extends ItemView {
 
 	private showEntityMenu(entity: any, event: MouseEvent, fileExists: boolean) {
 		const entityName = entity.name || entity.entity_name || '未命名';
+		const syncFolder = this.plugin.settings.syncTargetFolder;
 
 		const menu = new Menu();
 
 		if (fileExists) {
-			// 文件已存在，显示"再次下载"选项
+			// 文件已存在，显示"打开"和"再次下载"选项
+			menu.addItem((item) => {
+				item
+					.setTitle('打开')
+					.setIcon('file-text')
+					.onClick(async () => {
+						console.log('[Entity Menu] 选择打开:', entityName);
+						const mdFilePath = `${syncFolder}/${entityName}/${entityName}.md`;
+						const file = this.app.vault.getAbstractFileByPath(mdFilePath);
+						if (file instanceof TFile) {
+							await this.app.workspace.getLeaf(false).openFile(file);
+						} else {
+							new Notice(`文件不存在: ${mdFilePath}`);
+						}
+					});
+			});
+
 			menu.addItem((item) => {
 				item
 					.setTitle('再次下载')
@@ -633,9 +650,9 @@ id: ${obsId}
 		// 观察可能是对象 {id, content} 或字符串
 		const obsText = typeof observation === 'string' ? observation : (observation.content || '');
 
-		// 提取观察的标题（取第一句话或前20个字符）
-		const firstLine = obsText.split('\n')[0];
-		const title = firstLine.length > 20 ? firstLine.substring(0, 20) : firstLine;
+		// 提取观察的标题（取第一行，如果超过20字符则截断）
+		const firstLine = obsText.split('\n')[0].trim();
+		const title = firstLine.length > 20 ? firstLine.substring(0, 20).trim() : firstLine;
 
 		// 移除特殊字符，避免文件名问题
 		return title.replace(/[\/\\:*?"<>|]/g, '');

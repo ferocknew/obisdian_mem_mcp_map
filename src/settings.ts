@@ -1,26 +1,41 @@
 import { App, PluginSettingTab, Setting, TFolder } from 'obsidian';
 import MemoryGraphPlugin from './main';
 import { APIClient, APIEndpoint } from './api_client';
+import { LLMClient } from './llm_client';
+import { ConfigurationTester } from './utils/settings/configuration_tester';
+import { TestResultsDisplayer } from './utils/settings/test_results_displayer';
 
 export interface MemoryGraphSettings {
 	syncTargetFolder: string;
 	mcpApiUrl: string;
 	mcpApiKey: string;
+	llmApiUrl: string;
+	llmApiKey: string;
+	llmModelName: string;
+	llmApiType: 'anthropic' | 'openai';
 }
 
 export const DEFAULT_SETTINGS: MemoryGraphSettings = {
 	syncTargetFolder: '',
 	mcpApiUrl: '',
-	mcpApiKey: ''
+	mcpApiKey: '',
+	llmApiUrl: '',
+	llmApiKey: '',
+	llmModelName: '',
+	llmApiType: 'anthropic'
 }
 
 export class MemoryGraphSettingTab extends PluginSettingTab {
 	plugin: MemoryGraphPlugin;
 	private apiClient: APIClient | null = null;
+	private configTester: ConfigurationTester;
+	private resultsDisplayer: TestResultsDisplayer;
 
 	constructor(app: App, plugin: MemoryGraphPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		this.configTester = new ConfigurationTester(app);
+		this.resultsDisplayer = new TestResultsDisplayer();
 	}
 
 	display(): void {
@@ -120,6 +135,114 @@ export class MemoryGraphSettingTab extends PluginSettingTab {
 		const separatorEl = containerEl.createEl('hr');
 		separatorEl.style.marginTop = '20px';
 		separatorEl.style.marginBottom = '20px';
+
+		// LLM API 配置
+		containerEl.createEl('h3', { text: 'LLM API 配置' });
+
+		// LLM API URL
+		new Setting(containerEl)
+			.setName('LLM API URL')
+			.setDesc('输入 LLM 服务的 API 地址（例如: https://api.anthropic.com/v1 或 https://api.openai.com/v1）')
+			.addText(text => {
+				text.setValue(this.plugin.settings.llmApiUrl || '');
+				text.onChange(async (value) => {
+					this.plugin.settings.llmApiUrl = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// LLM API Key
+		new Setting(containerEl)
+			.setName('LLM API Key')
+			.setDesc('输入 LLM 服务的 API 密钥')
+			.addText(text => {
+				text.setValue(this.plugin.settings.llmApiKey || '');
+				text.setPlaceholder('sk-...');
+				text.inputEl.type = 'password';
+				text.onChange(async (value) => {
+					this.plugin.settings.llmApiKey = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// LLM 模型名称
+		new Setting(containerEl)
+			.setName('模型名称')
+			.setDesc('输入要使用的模型名称（例如: claude-3-5-sonnet-20241022 或 gpt-4）')
+			.addText(text => {
+				text.setValue(this.plugin.settings.llmModelName || '');
+				text.onChange(async (value) => {
+					this.plugin.settings.llmModelName = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// 接口类型
+		new Setting(containerEl)
+			.setName('接口类型')
+			.setDesc('选择 LLM API 的接口类型')
+			.addDropdown(dropdown => {
+				dropdown.addOption('anthropic', 'Anthropic');
+				dropdown.addOption('openai', '经典 OpenAI');
+				dropdown.setValue(this.plugin.settings.llmApiType || 'anthropic');
+				dropdown.onChange(async (value: 'anthropic' | 'openai') => {
+					this.plugin.settings.llmApiType = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// 横线分隔
+		const llmSeparatorEl = containerEl.createEl('hr');
+		llmSeparatorEl.style.marginTop = '20px';
+		llmSeparatorEl.style.marginBottom = '20px';
+
+		// 保存配置按钮
+		new Setting(containerEl)
+			.setName('保存配置')
+			.setDesc('保存所有配置更改并测试连接')
+			.addButton(button => {
+				button.setButtonText('保存配置');
+				button.setCta();
+				button.onClick(async () => {
+					button.setDisabled(true);
+					button.setButtonText('保存中...');
+
+					try {
+						// 保存配置
+						await this.plugin.saveSettings();
+						console.log('[Settings] ✓ 配置已保存');
+
+						// 测试配置
+						button.setButtonText('测试配置中...');
+						this.configTester.setApiClient(this.apiClient);
+						const testResults = await this.configTester.testAllConfigurations(this.plugin.settings);
+
+						// 更新 apiClient 引用
+						this.apiClient = this.configTester.getApiClient();
+
+						// 显示测试结果
+						this.resultsDisplayer.displayTestResults(containerEl, testResults);
+
+						button.setButtonText('✓ 已保存');
+						setTimeout(() => {
+							button.setButtonText('保存配置');
+							button.setDisabled(false);
+						}, 2000);
+					} catch (error) {
+						console.error('[Settings] 保存配置失败:', error);
+						button.setButtonText('✗ 保存失败');
+						setTimeout(() => {
+							button.setButtonText('保存配置');
+							button.setDisabled(false);
+						}, 2000);
+					}
+				});
+			});
+
+		// 横线分隔
+		const saveButtonSeparator = containerEl.createEl('hr');
+		saveButtonSeparator.style.marginTop = '20px';
+		saveButtonSeparator.style.marginBottom = '20px';
 
 		// Tools 列表展示区域
 		const toolsContainerEl = containerEl.createEl('div');
