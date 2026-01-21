@@ -60,30 +60,31 @@ export default class MemoryGraphPlugin extends Plugin {
 			})
 		);
 
-		// 注册文件右键菜单
+		// 注册文件和文件夹右键菜单
 		this.registerEvent(
-			this.app.workspace.on('file-menu', (menu: Menu, file: TFile) => {
-				menu.addItem((item) => {
-					item
-						.setTitle('分析并上传到记忆图谱系统')
-						.setIcon('brain-circuit')
-						.onClick(async () => {
-							await this.analyzeAndUploadFile(file);
-						});
-				});
-			})
-		);
+			this.app.workspace.on('file-menu', (menu: Menu, file: TFile, source: string) => {
+				// file-menu 事件会同时触发文件和文件夹的右键菜单
+				// 通过 vault 获取抽象文件来判断类型
+				const abstractFile = this.app.vault.getAbstractFileByPath(file.path);
 
-		// 注册文件夹右键菜单
-		this.registerEvent(
-			this.app.workspace.on('files-menu', (menu: Menu, file: TFile | TFolder) => {
-				if (file instanceof TFolder) {
+				if (abstractFile instanceof TFolder) {
+					// 文件夹菜单
 					menu.addItem((item) => {
 						item
 							.setTitle('分析并上传到记忆图谱系统')
 							.setIcon('brain-circuit')
 							.onClick(async () => {
-								await this.analyzeAndUploadFolder(file);
+								await this.analyzeAndUploadFolder(abstractFile);
+							});
+					});
+				} else if (abstractFile instanceof TFile) {
+					// 文件菜单
+					menu.addItem((item) => {
+						item
+							.setTitle('分析并上传到记忆图谱系统')
+							.setIcon('brain-circuit')
+							.onClick(async () => {
+								await this.analyzeAndUploadFile(abstractFile);
 							});
 					});
 				}
