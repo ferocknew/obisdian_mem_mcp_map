@@ -214,6 +214,13 @@ export class APIClient {
 	}
 
 	/**
+	 * 按名称检索特定节点（包含关系信息）
+	 */
+	async openNodes(names: string[]): Promise<any> {
+		return this.request('/tools/search/open', 'POST', { names });
+	}
+
+	/**
 	 * 断开连接
 	 */
 	async disconnect(): Promise<void> {

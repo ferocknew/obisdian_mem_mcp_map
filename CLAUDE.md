@@ -35,10 +35,10 @@ obisdian_mem_mcp_map/
 ├── src/
 │   ├── main.ts           # 插件主入口,继承自 Obsidian Plugin 类
 │   ├── settings.ts       # 设置界面和配置管理
-│   └── api_client.ts     # API 客户端封装,处理与记忆服务的 HTTP 通信
+│   ├── api_client.ts     # API 客户端封装,处理与记忆服务的 HTTP 通信
+│   └── search_view.ts    # 记忆图谱搜索视图,提供关键词和向量搜索界面
 ├── esbuild.config.mjs    # esbuild 构建配置
 ├── manifest.json         # Obsidian 插件清单
-├── DEBUG.md             # 调试指南
 └── package.json         # 项目依赖配置
 ```
 
@@ -65,6 +65,15 @@ obisdian_mem_mcp_map/
    - 连接到知识图谱记忆服务的 OpenAPI 接口
    - 提供实体、关系、搜索等操作方法
    - 支持 Bearer Token 认证
+
+4. **MemorySearchView** (`src/search_view.ts`)
+   - 自定义侧边栏视图,提供记忆图谱搜索界面
+   - 支持两种搜索模式:
+     - 关键词搜索: 精确匹配实体名称、类型和观察记录
+     - 向量搜索: 基于语义相似度的模糊搜索
+   - 搜索结果可点击生成或同步本地 Markdown 文件
+   - 自动生成实体文件夹结构: `<实体名>/<实体名>.md` 和 `<实体名>/观察/*.md`
+   - 支持从图谱数据生成包含关系链接的 Markdown 文件
 
 ### API 配置格式
 
@@ -128,6 +137,24 @@ obisdian_mem_mcp_map/
   - 类名: PascalCase (如: `APIClient`)
   - 函数/方法: camelCase (如: `testConnection`)
 
+## Markdown 文件生成规则
+
+搜索视图会根据图谱数据自动生成本地 Markdown 文件:
+
+1. **文件结构**:
+   - 主实体文件: `<同步目录>/<实体名>/<实体名>.md`
+   - 观察文件: `<同步目录>/<实体名>/观察/<观察标题>.md`
+
+2. **主实体文件内容**:
+   - Frontmatter: 包含 title, id, tags, keywords, relations
+   - 基本信息: 创建时间、观察数量
+   - 关联关系: 使用 `[[目标实体]]` 格式的双向链接
+   - 观察列表: 链接到观察文件
+
+3. **观察文件内容**:
+   - 观察内容文本
+   - 反向链接到主实体
+
 ## 关键注意事项
 
 - 使用 pnpm 而非 npm
@@ -135,4 +162,6 @@ obisdian_mem_mcp_map/
 - API 连接使用 HTTPS 协议,通过 Obsidian 的 `requestUrl` 绕过 CORS 限制
 - 设置页面会动态验证 API 配置并尝试连接服务器
 - 支持 Bearer Token 认证方式
-- 所有 console.log 带有前缀标识: `[API Client]`, `[Settings]`
+- 所有 console.log 带有前缀标识: `[API Client]`, `[Settings]`, `[Search View]`, `[Generate MD]`, `[Resync MD]`
+- 搜索视图使用 `VIEW_TYPE_MEMORY_SEARCH` 作为视图类型标识
+- 文件名中的特殊字符会被自动移除以避免文件系统问题

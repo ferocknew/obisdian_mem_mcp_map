@@ -43,7 +43,7 @@ export class MemorySearchView extends ItemView {
 
 		// 创建关键词搜索标签
 		const keywordTab = this.tabsContainer.createEl('button', {
-			text: '关键词搜索',
+			text: '关键词搜索（空格多个词 = And）',
 			cls: 'memory-search-tab active'
 		});
 		keywordTab.setAttribute('data-type', 'keyword');
@@ -329,14 +329,39 @@ export class MemorySearchView extends ItemView {
 
 	private async resyncMarkdownFiles(entity: any) {
 		const entityName = entity.name || entity.entity_name || '未命名';
-		const entityType = entity.entity_type || entity.entityType || entity.type || '未分类';
-		const observations = entity.observations || [];
-		const entityId = entity.id || entity.uuid || entity.entity_id || '';
 
-		console.log('[Resync MD] 重新同步实体:', entityName);
-		console.log('[Resync MD] 实体 UUID:', entityId);
+		console.log('[Resync MD] 搜索结果实体数据:', entity);
 
 		try {
+			new Notice(`正在获取 ${entityName} 的完整数据...`);
+
+			// 使用 read_graph API 获取完整的图谱数据（包含关系）
+			const graphData = await this.apiClient.readGraph();
+			console.log('[Resync MD] 完整图谱数据:', graphData);
+
+			// 从图谱中找到目标实体
+			const entities = graphData.entities || [];
+			const fullEntity = entities.find((e: any) =>
+				(e.name || e.entity_name) === entityName
+			);
+
+			if (!fullEntity) {
+				new Notice(`未找到实体 ${entityName} 的完整数据`);
+				return;
+			}
+
+			const entityType = fullEntity.entity_type || fullEntity.entityType || fullEntity.type || '未分类';
+			const observations = fullEntity.observations || [];
+			const entityId = fullEntity.id || fullEntity.uuid || fullEntity.entity_id || '';
+
+			// 从图谱的 relations 数组中提取与当前实体相关的关系
+			const allRelations = graphData.relations || [];
+			const relations = allRelations.filter((r: any) =>
+				(r.from === entityName || r.from_entity === entityName)
+			);
+
+			console.log('[Resync MD] 提取的关系数据:', relations);
+
 			new Notice(`正在重新同步 ${entityName} 的 MarkDown 文件...`);
 
 			// 获取同步目录
@@ -366,9 +391,9 @@ export class MemorySearchView extends ItemView {
 				console.log('[Resync MD] 创建观察目录:', observationFolderPath);
 			}
 
-			// 生成新的主实体 MD 文件（覆盖）
+			// 生成新的主实体 MD 文件（覆盖，传入关系数据）
 			const mainMdPath = `${entityFolderPath}/${entityName}.md`;
-			const mainMdContent = this.generateMainEntityMarkdown(entityName, entityType, observations, entityId);
+			const mainMdContent = this.generateMainEntityMarkdown(entityName, entityType, observations, entityId, relations);
 
 			const mainFile = this.app.vault.getAbstractFileByPath(mainMdPath);
 			if (mainFile instanceof TFile) {
@@ -405,14 +430,39 @@ export class MemorySearchView extends ItemView {
 
 	private async generateMarkdownFiles(entity: any) {
 		const entityName = entity.name || entity.entity_name || '未命名';
-		const entityType = entity.entity_type || entity.entityType || entity.type || '未分类';
-		const observations = entity.observations || [];
-		const entityId = entity.id || entity.uuid || entity.entity_id || '';
 
-		console.log('[Generate MD] 实体数据:', entity);
-		console.log('[Generate MD] 提取的 UUID:', entityId);
+		console.log('[Generate MD] 搜索结果实体数据:', entity);
 
 		try {
+			new Notice(`正在获取 ${entityName} 的完整数据...`);
+
+			// 使用 read_graph API 获取完整的图谱数据（包含关系）
+			const graphData = await this.apiClient.readGraph();
+			console.log('[Generate MD] 完整图谱数据:', graphData);
+
+			// 从图谱中找到目标实体
+			const entities = graphData.entities || [];
+			const fullEntity = entities.find((e: any) =>
+				(e.name || e.entity_name) === entityName
+			);
+
+			if (!fullEntity) {
+				new Notice(`未找到实体 ${entityName} 的完整数据`);
+				return;
+			}
+
+			const entityType = fullEntity.entity_type || fullEntity.entityType || fullEntity.type || '未分类';
+			const observations = fullEntity.observations || [];
+			const entityId = fullEntity.id || fullEntity.uuid || fullEntity.entity_id || '';
+
+			// 从图谱的 relations 数组中提取与当前实体相关的关系
+			const allRelations = graphData.relations || [];
+			const relations = allRelations.filter((r: any) =>
+				(r.from === entityName || r.from_entity === entityName)
+			);
+
+			console.log('[Generate MD] 提取的关系数据:', relations);
+
 			new Notice(`正在生成 ${entityName} 的 MarkDown 文件...`);
 
 			// 获取同步目录
@@ -440,12 +490,19 @@ export class MemorySearchView extends ItemView {
 				console.log('[Generate MD] 创建观察目录:', observationFolderPath);
 			}
 
-			// 生成主实体 MD 文件
+			// 生成主实体 MD 文件（传入关系数据）
 			const mainMdPath = `${entityFolderPath}/${entityName}.md`;
-			const mainMdContent = this.generateMainEntityMarkdown(entityName, entityType, observations, entityId);
+			const mainMdContent = this.generateMainEntityMarkdown(entityName, entityType, observations, entityId, relations);
 
-			await this.app.vault.create(mainMdPath, mainMdContent);
-			console.log('[Generate MD] 创建主实体文件:', mainMdPath);
+			// 检查文件是否已存在，如果存在则覆盖
+			const existingMainFile = this.app.vault.getAbstractFileByPath(mainMdPath);
+			if (existingMainFile instanceof TFile) {
+				await this.app.vault.modify(existingMainFile, mainMdContent);
+				console.log('[Generate MD] 覆盖主实体文件:', mainMdPath);
+			} else {
+				await this.app.vault.create(mainMdPath, mainMdContent);
+				console.log('[Generate MD] 创建主实体文件:', mainMdPath);
+			}
 
 			// 生成观察 MD 文件
 			for (const observation of observations) {
@@ -453,8 +510,15 @@ export class MemorySearchView extends ItemView {
 				const observationMdPath = `${observationFolderPath}/${observationTitle}.md`;
 				const observationMdContent = this.generateObservationMarkdown(observation, entityName);
 
-				await this.app.vault.create(observationMdPath, observationMdContent);
-				console.log('[Generate MD] 创建观察文件:', observationMdPath);
+				// 检查文件是否已存在，如果存在则覆盖
+				const existingObsFile = this.app.vault.getAbstractFileByPath(observationMdPath);
+				if (existingObsFile instanceof TFile) {
+					await this.app.vault.modify(existingObsFile, observationMdContent);
+					console.log('[Generate MD] 覆盖观察文件:', observationMdPath);
+				} else {
+					await this.app.vault.create(observationMdPath, observationMdContent);
+					console.log('[Generate MD] 创建观察文件:', observationMdPath);
+				}
 			}
 
 			new Notice(`✓ 成功生成 ${entityName} 的 MarkDown 文件`);
@@ -471,12 +535,31 @@ export class MemorySearchView extends ItemView {
 		}
 	}
 
-	private generateMainEntityMarkdown(entityName: string, entityType: string, observations: any[], entityId?: string): string {
+	private generateMainEntityMarkdown(entityName: string, entityType: string, observations: any[], entityId?: string, relations?: any[]): string {
 		const now = new Date();
 		const dateStr = now.toISOString().split('T')[0];
 
 		// 从观察中提取关键词
 		const keywords = this.extractKeywords(observations);
+
+		// 构建 frontmatter 中的 relations 字段
+		let relationsFrontmatter = '';
+		if (relations && relations.length > 0) {
+			relationsFrontmatter = 'relations:\n';
+			for (const relation of relations) {
+				const relationType = relation.relation_type || relation.relationType || relation.type || '关联';
+				const targetEntity = relation.to_entity || relation.to || relation.target || '';
+				const description = relation.description || '';
+				const bidirectional = relation.bidirectional !== undefined ? relation.bidirectional : false;
+
+				relationsFrontmatter += `  - type: "${relationType}"\n`;
+				relationsFrontmatter += `    target: "${targetEntity}"\n`;
+				if (description) {
+					relationsFrontmatter += `    description: "${description}"\n`;
+				}
+				relationsFrontmatter += `    bidirectional: ${bidirectional}\n`;
+			}
+		}
 
 		let content = `---
 title: ${entityName}
@@ -487,7 +570,7 @@ tags:
   - ${entityType}
 keywords:
 ${keywords.map(k => `  - ${k}`).join('\n')}
----
+${relationsFrontmatter}---
 
 # ${entityName}
 
@@ -498,10 +581,20 @@ ${keywords.map(k => `  - ${k}`).join('\n')}
 - **观察数量**: ${observations.length}
 
 ## 关联关系
-<!-- 在此添加关联关系 -->
-
-### 观察
 `;
+
+		// 添加关联关系内容
+		if (relations && relations.length > 0) {
+			for (const relation of relations) {
+				const relationType = relation.relation_type || relation.relationType || relation.type || '关联';
+				const targetEntity = relation.to_entity || relation.to || relation.target || '';
+				content += `- ${relationType}: [[${targetEntity}]]\n`;
+			}
+		} else {
+			content += `<!-- 暂无关联关系 -->\n`;
+		}
+
+		content += `\n### 观察\n`;
 
 		// 添加观察链接
 		for (const observation of observations) {
