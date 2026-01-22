@@ -258,6 +258,58 @@ export const chatViewStyles = `
 		height: 18px;
 	}
 
+	/* 上下文文件标签 */
+	.ai-chat-context-file-tag {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 10px;
+		border: 1px dashed var(--background-modifier-border);
+		border-radius: 6px;
+		background: var(--background-secondary);
+		font-size: 13px;
+		color: var(--text-muted);
+		transition: all 0.2s ease;
+	}
+
+	.ai-chat-context-file-tag:hover {
+		border-color: var(--text-muted);
+		background: var(--background-modifier-hover);
+	}
+
+	.ai-chat-context-file-name {
+		max-width: 200px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--text-normal);
+	}
+
+	.ai-chat-context-file-close {
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 3px;
+		transition: all 0.15s ease;
+	}
+
+	.ai-chat-context-file-close:hover {
+		background: var(--background-modifier-error);
+		color: var(--text-error);
+	}
+
+	.ai-chat-context-file-close svg {
+		width: 14px;
+		height: 14px;
+	}
+
 	.ai-chat-input-wrapper {
 		display: flex;
 		gap: 8px;

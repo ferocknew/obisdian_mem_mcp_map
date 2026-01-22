@@ -5,3 +5,4 @@
 
 export { whoogleSearchTool } from '@/utils/tools/whoogle_search_tool';
 export { updateChatTitleTool } from '@/utils/tools/update_title_tool';
+export { readDocTool } from '@/utils/tools/read_doc_tool';

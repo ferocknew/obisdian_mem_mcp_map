@@ -11,7 +11,7 @@ export const updateChatTitleTool = {
 	type: 'function',
 	function: {
 		name: 'update_chat_title',
-		description: '修改当前聊天对话的标题。当用户明确要求修改标题，或者对话主题发生重大变化需要更新标题时使用。',
+		description: '修改当前聊天对话的标题。每次开始对话都应该修改标题，以确保标题能准确概括对话主题。',
 		parameters: {
 			type: 'object',
 			properties: {

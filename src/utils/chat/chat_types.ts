@@ -22,6 +22,7 @@ export interface ChatState {
 	webSearchEnabled: boolean;
 	isGenerating: boolean;
 	abortController: AbortController | null;
+	contextFile: { name: string; content: string } | null;
 }
 
 /**
@@ -37,6 +38,7 @@ export interface UIElements {
 	input: HTMLInputElement;
 	sendButton: HTMLButtonElement;
 	searchButton: HTMLButtonElement;
+	contextFileTag: HTMLElement;
 }
 
 /**

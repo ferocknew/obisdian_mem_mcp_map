@@ -31,6 +31,7 @@ export interface ToolExecutionResult {
 export class ToolExecutor {
 	private whoogleClient: WhoogleClient | null = null;
 	private updateTitleCallback: ((title: string) => void) | null = null;
+	private readDocCallback: (() => Promise<string>) | null = null;
 
 	/**
 	 * 设置 Whoogle 客户端
@@ -53,6 +54,16 @@ export class ToolExecutor {
 	}
 
 	/**
+	 * 设置文档读取回调
+	 *
+	 * @param callback - 文档读取回调函数，null 表示清空
+	 */
+	setReadDocCallback(callback: (() => Promise<string>) | null): void {
+		this.readDocCallback = callback;
+		console.log('[Tool Executor] 文档读取回调已', callback ? '设置' : '清空');
+	}
+
+	/**
 	 * 执行单个工具调用
 	 *
 	 * @param toolCall - LLM 返回的工具调用对象
@@ -70,6 +81,8 @@ export class ToolExecutor {
 					return await this.executeWhoogleSearch(args);
 				case 'update_chat_title':
 					return await this.executeUpdateChatTitle(args);
+				case 'read_doc':
+					return await this.executeReadDoc(args);
 				default:
 					console.error(`[Tool Executor] ✗ 未知的工具: ${functionName}`);
 					return {
@@ -174,6 +187,52 @@ export class ToolExecutor {
 			return {
 				success: false,
 				toolName: 'update_chat_title',
+				error: error.message
+			};
+		}
+	}
+
+	/**
+	 * 执行读取文档
+	 *
+	 * @param args - 参数（空对象）
+	 * @returns 执行结果
+	 */
+	private async executeReadDoc(args: any): Promise<ToolExecutionResult> {
+		if (!this.readDocCallback) {
+			return {
+				success: false,
+				toolName: 'read_doc',
+				error: '文档读取回调未配置'
+			};
+		}
+
+		try {
+			console.log('[Tool Executor] 读取当前文档内容');
+
+			const content = await this.readDocCallback();
+
+			if (!content || content.trim() === '') {
+				return {
+					success: false,
+					toolName: 'read_doc',
+					error: '文档内容为空或不存在'
+				};
+			}
+
+			console.log('[Tool Executor] ✓ 文档读取成功，长度:', content.length);
+
+			return {
+				success: true,
+				toolName: 'read_doc',
+				result: { content },
+				displayText: `已读取文档内容（${content.length} 字符）`
+			};
+		} catch (error) {
+			console.error('[Tool Executor] ✗ 读取文档失败:', error);
+			return {
+				success: false,
+				toolName: 'read_doc',
 				error: error.message
 			};
 		}

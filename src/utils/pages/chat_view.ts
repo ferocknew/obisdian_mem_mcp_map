@@ -131,6 +131,20 @@ export class ChatView {
 	}
 
 	/**
+	 * 设置上下文文件
+	 */
+	setContextFile(fileName: string, content: string): void {
+		this.controller.setContextFile(fileName, content);
+	}
+
+	/**
+	 * 移除上下文文件
+	 */
+	removeContextFile(): void {
+		this.controller.removeContextFile();
+	}
+
+	/**
 	 * 获取样式 CSS
 	 */
 	static getStyles(): string {

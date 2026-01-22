@@ -78,10 +78,25 @@ export class OpenAILLMDriver extends LLMDriverBase {
 			}
 
 			// 添加用户和助手的消息
-			apiMessages.push(...messages.map(msg => ({
-				role: msg.role,
-				content: msg.content
-			})));
+			for (const msg of messages) {
+				const apiMsg: any = {
+					role: msg.role,
+					content: msg.content
+				};
+
+				// 如果是 assistant 消息且包含 toolCalls,添加 tool_calls 字段
+				if (msg.role === 'assistant' && msg.toolCalls) {
+					apiMsg.tool_calls = msg.toolCalls;
+				}
+
+				// 如果是 tool 消息,添加 tool_call_id 字段
+				if (msg.role === 'tool' && msg.toolCallId) {
+					apiMsg.tool_call_id = msg.toolCallId;
+					apiMsg.name = msg.toolName;
+				}
+
+				apiMessages.push(apiMsg);
+			}
 
 			const requestBody: any = {
 				model: this.config.modelName,
@@ -162,10 +177,26 @@ export class OpenAILLMDriver extends LLMDriverBase {
 				});
 			}
 
-			apiMessages.push(...messages.map(msg => ({
-				role: msg.role,
-				content: msg.content
-			})));
+			// 添加用户和助手的消息
+			for (const msg of messages) {
+				const apiMsg: any = {
+					role: msg.role,
+					content: msg.content
+				};
+
+				// 如果是 assistant 消息且包含 toolCalls,添加 tool_calls 字段
+				if (msg.role === 'assistant' && msg.toolCalls) {
+					apiMsg.tool_calls = msg.toolCalls;
+				}
+
+				// 如果是 tool 消息,添加 tool_call_id 字段
+				if (msg.role === 'tool' && msg.toolCallId) {
+					apiMsg.tool_call_id = msg.toolCallId;
+					apiMsg.name = msg.toolName;
+				}
+
+				apiMessages.push(apiMsg);
+			}
 
 			const requestBody: any = {
 				model: this.config.modelName,

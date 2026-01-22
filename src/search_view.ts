@@ -53,6 +53,9 @@ export class MemorySearchView extends ItemView {
 		// 初始化 Whoogle 客户端
 		this.initializeWhoogleClient();
 
+		// 注册文件打开事件监听
+		this.registerFileOpenListener();
+
 		// 创建标签页容器
 		this.tabsContainer = container.createDiv({ cls: 'memory-search-tabs' });
 
@@ -214,6 +217,54 @@ export class MemorySearchView extends ItemView {
 					this.searchPageView.handleSearch(searchType);
 				});
 			}
+		}
+	}
+
+	/**
+	 * 注册文件打开事件监听
+	 */
+	private registerFileOpenListener() {
+		// 监听文件打开事件
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => {
+				if (!leaf || !leaf.view) return;
+
+				// 检查是否是 Markdown 编辑视图
+				const view = leaf.view;
+				if (view.getViewType() === 'markdown') {
+					const markdownView = view as any;
+					const file = markdownView.file;
+
+					if (file && file.extension === 'md') {
+						// 自动将当前打开的文件内容注入到聊天上下文
+						this.injectFileToChat(file);
+					}
+				}
+			})
+		);
+	}
+
+	/**
+	 * 将文件内容注入到聊天上下文
+	 * 注意：现在只设置文件引用，不立即注入完整内容
+	 * AI 可以通过 read_doc 工具按需读取
+	 */
+	private async injectFileToChat(file: any) {
+		try {
+			const content = await this.app.vault.read(file);
+
+			if (!content.trim()) {
+				console.log('[Search View] 文件内容为空，不注入上下文');
+				return;
+			}
+
+			// 设置到聊天视图（提供工具让 AI 按需读取，而不是立即注入）
+			if (this.chatView) {
+				this.chatView.setContextFile(file.basename, content);
+				console.log('[Search View] ✓ 已设置文档引用，AI 可通过 read_doc 工具读取:', file.basename);
+			}
+		} catch (error) {
+			console.error('[Search View] 读取文件失败:', error);
 		}
 	}
 

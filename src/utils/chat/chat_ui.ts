@@ -49,7 +49,8 @@ export class ChatUIManager {
 			inputToolbar: inputContainer.querySelector('.ai-chat-input-toolbar') as HTMLElement,
 			input: inputContainer.querySelector('.ai-chat-input') as HTMLInputElement,
 			sendButton: inputContainer.querySelector('.ai-chat-send-button') as HTMLButtonElement,
-			searchButton: inputContainer.querySelector('.ai-chat-input-toolbar-button') as HTMLButtonElement
+			searchButton: inputContainer.querySelector('.ai-chat-input-toolbar-button') as HTMLButtonElement,
+			contextFileTag: inputContainer.querySelector('.ai-chat-context-file-tag') as HTMLElement
 		};
 	}
 
@@ -112,6 +113,10 @@ export class ChatUIManager {
 			attr: { 'aria-label': '联网搜索' }
 		});
 		setIcon(searchButton, 'globe');
+
+		// 上下文文件标签（初始隐藏）
+		const contextFileTag = inputToolbar.createDiv({ cls: 'ai-chat-context-file-tag' });
+		contextFileTag.style.display = 'none';
 
 		// 创建输入区域容器
 		const inputWrapper = inputContainer.createDiv({ cls: 'ai-chat-input-wrapper' });
@@ -350,6 +355,38 @@ export class ChatUIManager {
 			text: '开始与AI对话吧！',
 			cls: 'ai-chat-welcome'
 		});
+	}
+
+	/**
+	 * 更新上下文文件标签
+	 */
+	updateContextFileTag(fileName: string | null, onRemove?: () => void): void {
+		if (!fileName) {
+			this.ui.contextFileTag.style.display = 'none';
+			this.ui.contextFileTag.empty();
+			return;
+		}
+
+		this.ui.contextFileTag.empty();
+		this.ui.contextFileTag.style.display = 'flex';
+
+		// 文件名文本
+		this.ui.contextFileTag.createSpan({
+			text: fileName,
+			cls: 'ai-chat-context-file-name'
+		});
+
+		// 关闭按钮
+		const closeButton = this.ui.contextFileTag.createEl('button', {
+			cls: 'ai-chat-context-file-close',
+			attr: { 'aria-label': '移除上下文' }
+		});
+		setIcon(closeButton, 'x');
+
+		// 绑定移除事件
+		if (onRemove) {
+			closeButton.addEventListener('click', onRemove);
+		}
 	}
 
 	/**

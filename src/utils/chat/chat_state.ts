@@ -14,7 +14,8 @@ export class ChatStateManager {
 			title: '新的对话',
 			webSearchEnabled: initialWebSearchEnabled,
 			isGenerating: false,
-			abortController: null
+			abortController: null,
+			contextFile: null
 		};
 	}
 
@@ -116,6 +117,32 @@ export class ChatStateManager {
 	}
 
 	/**
+	 * 获取上下文文件
+	 */
+	getContextFile(): { name: string; content: string } | null {
+		return this.state.contextFile;
+	}
+
+	/**
+	 * 设置上下文文件
+	 */
+	setContextFile(file: { name: string; content: string } | null): void {
+		this.state.contextFile = file;
+		if (file) {
+			console.log('[Chat State] 上下文文件已设置:', file.name);
+		} else {
+			console.log('[Chat State] 上下文文件已清除');
+		}
+	}
+
+	/**
+	 * 检查是否有上下文文件
+	 */
+	hasContextFile(): boolean {
+		return this.state.contextFile !== null;
+	}
+
+	/**
 	 * 重置状态（新建聊天时使用）
 	 */
 	reset(initialWebSearchEnabled: boolean = false): void {
@@ -124,6 +151,7 @@ export class ChatStateManager {
 		this.state.webSearchEnabled = initialWebSearchEnabled;
 		this.state.isGenerating = false;
 		this.state.abortController = null;
+		this.state.contextFile = null;
 		console.log('[Chat State] 状态已重置');
 	}
 }

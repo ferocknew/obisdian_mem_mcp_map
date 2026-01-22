@@ -30,6 +30,15 @@ export class ChatController {
 			this.ui.updateTitle(title);
 		});
 
+		// 设置文档读取回调
+		this.dependencies.toolExecutor.setReadDocCallback(async () => {
+			const contextFile = this.state.getContextFile();
+			if (!contextFile) {
+				throw new Error('没有可读取的文档');
+			}
+			return contextFile.content;
+		});
+
 		this.setupEventListeners();
 	}
 
@@ -71,6 +80,9 @@ export class ChatController {
 		this.ui.getUI().title.addEventListener('click', () => {
 			this.handleEditTitle();
 		});
+
+		// 初始化上下文文件标签（隐藏状态）
+		this.updateContextFileUI();
 	}
 
 	/**
@@ -120,14 +132,27 @@ export class ChatController {
 			// 添加用户消息到界面
 			this.ui.addMessage('user', message);
 
+			// 构建发送给 AI 的消息
+			let messageToSend = message;
+			const contextFile = this.state.getContextFile();
+
+			// 如果有上下文文件，添加系统提示引导 AI 使用 read_doc 工具
+			if (contextFile) {
+				messageToSend = `[系统提示：当前打开了文档 "${contextFile.name}"，你可以使用 read_doc 工具来读取完整内容]\n\n${message}`;
+				console.log('[Chat Controller] 已添加文档提示:', contextFile.name);
+			}
+
 			// 添加到消息历史
-			this.state.addMessage({ role: 'user', content: message });
+			this.state.addMessage({ role: 'user', content: messageToSend });
 
 			// 清空输入框
 			this.ui.clearInput();
 
-			// 获取可用工具
-			const tools = getAvailableTools(this.state.isWebSearchEnabled());
+			// 获取可用工具（传递是否有上下文文档）
+			const tools = getAvailableTools(
+				this.state.isWebSearchEnabled(),
+				this.state.hasContextFile()
+			);
 			console.log('[Chat Controller] 可用工具数量:', tools.length);
 
 			// 移除思考中状态
@@ -168,8 +193,22 @@ export class ChatController {
 			if (response.success && response.toolCalls && response.toolCalls.length > 0) {
 				console.log('[Chat Controller] ✓ AI 请求调用工具，数量:', response.toolCalls.length);
 
-				// 移除流式消息容器（因为要显示工具调用状态）
-				streamingMsg.messageDiv.remove();
+				// 如果 AI 在调用工具前返回了文本内容,先显示这些内容
+				if (response.message && response.message.trim()) {
+					// 如果流式 buffer 为空,说明是非流式响应,需要手动更新内容
+					if (streamingMsg.buffer.text === '') {
+						await this.ui.updateStreamingMessage(
+							streamingMsg.contentDiv,
+							streamingMsg.buffer,
+							response.message
+						);
+					}
+					// 保留流式消息容器,不移除
+					console.log('[Chat Controller] ✓ 已显示 AI 的文本内容:', response.message.substring(0, 50) + '...');
+				} else {
+					// 如果没有文本内容,才移除流式消息容器
+					streamingMsg.messageDiv.remove();
+				}
 
 				await this.handleToolCalls(response.toolCalls, tools);
 
@@ -257,27 +296,65 @@ export class ChatController {
 		// 使用工具处理器执行工具调用
 		const { success, results } = await this.toolHandler.handleToolCalls(toolCalls);
 
-		if (!success) {
-			return;
-		}
+		// 将 AI 的工具调用请求添加到对话历史
+		this.state.addMessage({
+			role: 'assistant',
+			content: '',
+			toolCalls: toolCalls
+		});
 
-		// 将工具结果添加到对话历史
-		for (const result of results) {
+		// 将工具执行结果添加到对话历史(无论成功还是失败)
+		for (let i = 0; i < results.length; i++) {
+			const result = results[i];
+			const toolCall = toolCalls[i];
+
+			// 构造工具结果消息
+			let toolResultContent: string;
 			if (result.success) {
-				this.state.addMessage({
-					role: 'assistant',
-					content: JSON.stringify(result.result || result)
+				// 成功时返回实际结果
+				toolResultContent = JSON.stringify(result.result || { status: 'success', message: result.displayText });
+			} else {
+				// 失败时返回错误信息
+				toolResultContent = JSON.stringify({
+					status: 'error',
+					error: result.error,
+					message: `工具 ${result.toolName} 执行失败: ${result.error}`
 				});
 			}
+
+			this.state.addMessage({
+				role: 'tool',
+				content: toolResultContent,
+				toolCallId: toolCall.id,
+				toolName: toolCall.function.name
+			});
 		}
 
 		// 再次调用 LLM 获取最终回复
 		console.log('[Chat Controller] 基于工具结果再次请求 AI');
 		const finalResponse = await this.dependencies.llmClient!.sendMessage(this.state.getMessages(), tools);
 
-		if (finalResponse.success && finalResponse.message) {
+		// 检查是否又返回了新的工具调用（递归处理）
+		if (finalResponse.success && finalResponse.toolCalls && finalResponse.toolCalls.length > 0) {
+			console.log('[Chat Controller] ✓ AI 再次请求调用工具，数量:', finalResponse.toolCalls.length);
+
+			// 如果同时返回了文本内容，先显示
+			if (finalResponse.message && finalResponse.message.trim()) {
+				await this.ui.addMarkdownMessage('assistant', finalResponse.message);
+				console.log('[Chat Controller] ✓ 已显示 AI 的文本内容');
+			}
+
+			// 递归处理新的工具调用
+			await this.handleToolCalls(finalResponse.toolCalls, tools);
+		} else if (finalResponse.success && finalResponse.message) {
+			// 没有工具调用，显示最终回复
 			await this.ui.addMarkdownMessage('assistant', finalResponse.message);
 			this.state.addMessage({ role: 'assistant', content: finalResponse.message });
+		} else if (!finalResponse.success) {
+			// 如果第二次请求也失败,显示错误
+			const errorMsg = `抱歉,处理工具结果时出错: ${finalResponse.error || '未知错误'}`;
+			await this.ui.addMarkdownMessage('assistant', errorMsg);
+			this.state.addMessage({ role: 'assistant', content: errorMsg });
 		}
 	}
 
@@ -288,6 +365,36 @@ export class ChatController {
 		const enabled = this.state.toggleWebSearch();
 		this.ui.updateSearchButtonState(enabled);
 		new Notice(`联网搜索已${enabled ? '启用' : '禁用'}`);
+	}
+
+	/**
+	 * 设置上下文文件
+	 */
+	setContextFile(fileName: string, content: string): void {
+		this.state.setContextFile({ name: fileName, content });
+		this.updateContextFileUI();
+		console.log('[Chat Controller] 上下文文件已设置:', fileName);
+	}
+
+	/**
+	 * 移除上下文文件
+	 */
+	removeContextFile(): void {
+		this.state.setContextFile(null);
+		this.updateContextFileUI();
+		new Notice('已移除上下文文件');
+		console.log('[Chat Controller] 上下文文件已移除');
+	}
+
+	/**
+	 * 更新上下文文件UI
+	 */
+	private updateContextFileUI(): void {
+		const contextFile = this.state.getContextFile();
+		this.ui.updateContextFileTag(
+			contextFile?.name || null,
+			() => this.removeContextFile()
+		);
 	}
 
 	/**
@@ -303,6 +410,7 @@ export class ChatController {
 		this.ui.clearMessages();
 		this.ui.updateTitle(this.state.getTitle());
 		this.ui.updateSearchButtonState(this.initialWebSearchEnabled);
+		this.updateContextFileUI();
 
 		new Notice('已创建新对话');
 	}

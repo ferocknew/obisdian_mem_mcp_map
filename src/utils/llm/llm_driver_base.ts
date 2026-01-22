@@ -26,8 +26,11 @@ export interface LLMDriverConfig {
 }
 
 export interface ChatMessage {
-	role: 'user' | 'assistant' | 'system';
+	role: 'user' | 'assistant' | 'system' | 'tool';
 	content: string | any[];
+	toolCalls?: ToolCall[];
+	toolCallId?: string;
+	toolName?: string;
 }
 
 export interface ToolCall {

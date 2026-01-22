@@ -57,6 +57,15 @@ export default class MemoryGraphPlugin extends Plugin {
 							await this.analyzeAndUploadFromEditor(editor, view);
 						});
 				});
+
+				menu.addItem((item) => {
+					item
+						.setTitle('在AI聊天中引入')
+						.setIcon('message-square')
+						.onClick(async () => {
+							await this.introduceToAIChatFromEditor(editor, view);
+						});
+				});
 			})
 		);
 
@@ -77,6 +86,15 @@ export default class MemoryGraphPlugin extends Plugin {
 								await this.analyzeAndUploadFolder(abstractFile);
 							});
 					});
+
+					menu.addItem((item) => {
+						item
+							.setTitle('在AI聊天中引入')
+							.setIcon('message-square')
+							.onClick(async () => {
+								await this.introduceToAIChatFolder(abstractFile);
+							});
+					});
 				} else if (abstractFile instanceof TFile) {
 					// 文件菜单
 					menu.addItem((item) => {
@@ -85,6 +103,15 @@ export default class MemoryGraphPlugin extends Plugin {
 							.setIcon('brain-circuit')
 							.onClick(async () => {
 								await this.analyzeAndUploadFile(abstractFile);
+							});
+					});
+
+					menu.addItem((item) => {
+						item
+							.setTitle('在AI聊天中引入')
+							.setIcon('message-square')
+							.onClick(async () => {
+								await this.introduceToAIChatFile(abstractFile);
 							});
 					});
 				}
@@ -216,6 +243,174 @@ export default class MemoryGraphPlugin extends Plugin {
 		}
 
 		return files;
+	}
+
+	/**
+	 * 获取 MemorySearchView 实例
+	 */
+	private getMemorySearchView(): MemorySearchView | null {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORY_SEARCH);
+		if (leaves.length > 0) {
+			return leaves[0].view as MemorySearchView;
+		}
+		return null;
+	}
+
+	/**
+	 * 从编辑器引入内容到 AI 聊天
+	 */
+	async introduceToAIChatFromEditor(editor: Editor, view: MarkdownView) {
+		console.log('[Context Menu] 从编辑器引入到AI聊天');
+
+		const selection = editor.getSelection();
+		const content = selection || editor.getValue();
+
+		if (!content.trim()) {
+			new Notice('没有可引入的内容');
+			return;
+		}
+
+		// 激活视图
+		await this.activateView();
+
+		// 获取视图实例
+		const searchView = this.getMemorySearchView();
+		if (!searchView) {
+			new Notice('无法打开AI聊天界面');
+			return;
+		}
+
+		// 切换到聊天标签
+		const chatTab = searchView.tabsContainer.querySelector('[data-type="chat"]') as HTMLElement;
+		if (chatTab) {
+			chatTab.click();
+		}
+
+		// 等待界面切换完成
+		setTimeout(() => {
+			// 根据是否有选中内容来确定标签显示的名称
+			let displayName: string;
+			if (selection) {
+				// 有选中内容：显示前10个字符 + "..."
+				const preview = content.substring(0, 10).trim();
+				displayName = preview + '...';
+			} else {
+				// 无选中内容：显示文件名
+				displayName = view.file?.basename || '未命名';
+			}
+
+			// 使用新的上下文注入方式
+			searchView.chatView.setContextFile(displayName, content);
+			searchView.chatView.chatInput.focus();
+
+			new Notice(`已将${selection ? '选中内容' : displayName}注入到聊天上下文`);
+		}, 100);
+	}
+
+	/**
+	 * 从文件引入内容到 AI 聊天
+	 */
+	async introduceToAIChatFile(file: TFile) {
+		console.log('[Context Menu] 从文件引入到AI聊天:', file.path);
+
+		try {
+			const content = await this.app.vault.read(file);
+
+			if (!content.trim()) {
+				new Notice('文件内容为空');
+				return;
+			}
+
+			// 激活视图
+			await this.activateView();
+
+			// 获取视图实例
+			const searchView = this.getMemorySearchView();
+			if (!searchView) {
+				new Notice('无法打开AI聊天界面');
+				return;
+			}
+
+			// 切换到聊天标签
+			const chatTab = searchView.tabsContainer.querySelector('[data-type="chat"]') as HTMLElement;
+			if (chatTab) {
+				chatTab.click();
+			}
+
+			// 等待界面切换完成
+			setTimeout(() => {
+				// 使用新的上下文注入方式
+				searchView.chatView.setContextFile(file.basename, content);
+				searchView.chatView.chatInput.focus();
+
+				new Notice(`已将 ${file.name} 注入到聊天上下文`);
+			}, 100);
+		} catch (error) {
+			console.error('[Context Menu] 读取文件失败:', error);
+			new Notice('读取文件失败');
+		}
+	}
+
+	/**
+	 * 从文件夹引入内容到 AI 聊天
+	 */
+	async introduceToAIChatFolder(folder: TFolder) {
+		console.log('[Context Menu] 从文件夹引入到AI聊天:', folder.path);
+
+		const files = this.getMarkdownFilesInFolder(folder);
+
+		if (files.length === 0) {
+			new Notice('文件夹中没有 Markdown 文件');
+			return;
+		}
+
+		try {
+			// 读取所有文件内容
+			const fileContents: string[] = [];
+			for (const file of files) {
+				const content = await this.app.vault.read(file);
+				if (content.trim()) {
+					fileContents.push(`## ${file.path}\n\n${content}`);
+				}
+			}
+
+			if (fileContents.length === 0) {
+				new Notice('文件夹中没有有效内容');
+				return;
+			}
+
+			// 激活视图
+			await this.activateView();
+
+			// 获取视图实例
+			const searchView = this.getMemorySearchView();
+			if (!searchView) {
+				new Notice('无法打开AI聊天界面');
+				return;
+			}
+
+			// 切换到聊天标签
+			const chatTab = searchView.tabsContainer.querySelector('[data-type="chat"]') as HTMLElement;
+			if (chatTab) {
+				chatTab.click();
+			}
+
+			// 等待界面切换完成
+			setTimeout(() => {
+				// 合并所有文件内容
+				const combinedContent = fileContents.join('\n\n---\n\n');
+				const folderName = `${folder.name} (${fileContents.length}个文件)`;
+
+				// 使用新的上下文注入方式
+				searchView.chatView.setContextFile(folderName, combinedContent);
+				searchView.chatView.chatInput.focus();
+
+				new Notice(`已将文件夹 ${folder.name} 的 ${fileContents.length} 个文件注入到聊天上下文`);
+			}, 100);
+		} catch (error) {
+			console.error('[Context Menu] 读取文件夹失败:', error);
+			new Notice('读取文件夹失败');
+		}
 	}
 
 	async loadSettings() {
