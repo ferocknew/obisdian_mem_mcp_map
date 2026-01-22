@@ -77,6 +77,9 @@ export class ChatView {
 		this.chatSendButton = uiElements.sendButton;
 		this.searchButton = uiElements.searchButton;
 
+		// 同步搜索按钮的初始状态
+		this.ui.updateSearchButtonState(this.initialWebSearchEnabled);
+
 		// 同步公开数据
 		this.syncPublicData();
 	}

@@ -8,6 +8,8 @@ export interface LLMConfig {
 	modelName: string;
 	apiType: 'anthropic' | 'openai';
 	systemRules?: string;
+	contextWindow?: number;
+	maxOutputTokens?: number;
 }
 
 export class LLMClient {
@@ -20,14 +22,18 @@ export class LLMClient {
 				apiUrl: config.apiUrl,
 				apiKey: config.apiKey,
 				modelName: config.modelName,
-				systemRules: config.systemRules
+				systemRules: config.systemRules,
+				contextWindow: config.contextWindow,
+				maxOutputTokens: config.maxOutputTokens
 			});
 		} else {
 			this.driver = new OpenAILLMDriver({
 				apiUrl: config.apiUrl,
 				apiKey: config.apiKey,
 				modelName: config.modelName,
-				systemRules: config.systemRules
+				systemRules: config.systemRules,
+				contextWindow: config.contextWindow,
+				maxOutputTokens: config.maxOutputTokens
 			});
 		}
 	}

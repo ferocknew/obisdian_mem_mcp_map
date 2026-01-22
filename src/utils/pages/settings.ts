@@ -152,6 +152,34 @@ export class MemoryGraphSettingTab extends PluginSettingTab {
 				});
 			});
 
+		// 刷新模型列表按钮
+		new Setting(containerEl)
+			.setName('刷新模型列表')
+			.setDesc('从 LLM API 获取最新的可用模型列表')
+			.addButton(button => {
+				button.setButtonText('刷新模型列表');
+				button.onClick(async () => {
+					button.setDisabled(true);
+					button.setButtonText('刷新中...');
+
+					try {
+						await this.fetchModelsListIfReady();
+						button.setButtonText('✓ 刷新成功');
+						setTimeout(() => {
+							button.setButtonText('刷新模型列表');
+							button.setDisabled(false);
+						}, 2000);
+					} catch (error) {
+						console.error('[Settings] 刷新模型列表失败:', error);
+						button.setButtonText('✗ 刷新失败');
+						setTimeout(() => {
+							button.setButtonText('刷新模型列表');
+							button.setDisabled(false);
+						}, 2000);
+					}
+				});
+			});
+
 		// LLM 模型名称 - 动态切换为下拉框或文本输入
 		const modelSetting = new Setting(containerEl)
 			.setName('模型名称')
@@ -189,6 +217,36 @@ export class MemoryGraphSettingTab extends PluginSettingTab {
 				});
 			});
 		}
+
+		// 上下文窗口
+		new Setting(containerEl)
+			.setName('上下文窗口')
+			.setDesc('设置模型的上下文窗口大小（单位：K tokens，例如 128 表示 128K）')
+			.addText(text => {
+				text.setValue(String(this.plugin.settings.llmContextWindow || 128));
+				text.setPlaceholder('128');
+				text.inputEl.type = 'number';
+				text.onChange(async (value) => {
+					const numValue = parseInt(value) || 128;
+					this.plugin.settings.llmContextWindow = numValue;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// 最大输出 Tokens
+		new Setting(containerEl)
+			.setName('最大输出 Tokens')
+			.setDesc('设置模型的最大输出 token 数量（单位：K tokens，例如 96 表示 96K）')
+			.addText(text => {
+				text.setValue(String(this.plugin.settings.llmMaxOutputTokens || 96));
+				text.setPlaceholder('96');
+				text.inputEl.type = 'number';
+				text.onChange(async (value) => {
+					const numValue = parseInt(value) || 96;
+					this.plugin.settings.llmMaxOutputTokens = numValue;
+					await this.plugin.saveSettings();
+				});
+			});
 
 		// 接口类型
 		new Setting(containerEl)
@@ -544,7 +602,9 @@ export class MemoryGraphSettingTab extends PluginSettingTab {
 				apiKey: settings.llmApiKey,
 				modelName: settings.llmModelName || 'temp',
 				apiType: settings.llmApiType,
-				systemRules: settings.llmSystemRules
+				systemRules: settings.llmSystemRules,
+				contextWindow: settings.llmContextWindow,
+				maxOutputTokens: settings.llmMaxOutputTokens
 			});
 
 			// 拉取模型列表

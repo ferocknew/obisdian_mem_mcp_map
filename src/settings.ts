@@ -8,6 +8,8 @@ export interface MemoryGraphSettings {
 	llmApiUrl: string;
 	llmApiKey: string;
 	llmModelName: string;
+	llmContextWindow: number;
+	llmMaxOutputTokens: number;
 	llmApiType: 'anthropic' | 'openai';
 	llmSystemRules: string;
 	searchWhoogleUrl: string;
@@ -23,6 +25,8 @@ export const DEFAULT_SETTINGS: MemoryGraphSettings = {
 	llmApiUrl: '',
 	llmApiKey: '',
 	llmModelName: '',
+	llmContextWindow: 128,
+	llmMaxOutputTokens: 96,
 	llmApiType: 'anthropic',
 	llmSystemRules: '',
 	searchWhoogleUrl: '',

@@ -24,6 +24,12 @@ export class ChatController {
 		this.toolHandler = new ChatToolHandler(dependencies.toolExecutor, ui);
 		this.initialWebSearchEnabled = initialWebSearchEnabled;
 
+		// 设置标题更新回调
+		this.dependencies.toolExecutor.setUpdateTitleCallback((title: string) => {
+			this.state.setTitle(title);
+			this.ui.updateTitle(title);
+		});
+
 		this.setupEventListeners();
 	}
 

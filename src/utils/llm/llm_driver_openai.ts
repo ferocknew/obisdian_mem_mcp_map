@@ -85,7 +85,7 @@ export class OpenAILLMDriver extends LLMDriverBase {
 
 			const requestBody: any = {
 				model: this.config.modelName,
-				max_tokens: 4096,
+				max_tokens: (this.config.maxOutputTokens || 96) * 1024,
 				messages: apiMessages
 			};
 
@@ -169,7 +169,7 @@ export class OpenAILLMDriver extends LLMDriverBase {
 
 			const requestBody: any = {
 				model: this.config.modelName,
-				max_tokens: 4096,
+				max_tokens: (this.config.maxOutputTokens || 96) * 1024,
 				stream: true,
 				messages: apiMessages
 			};

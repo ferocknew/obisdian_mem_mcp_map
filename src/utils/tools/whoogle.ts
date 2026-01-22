@@ -1,52 +1,78 @@
 /**
- * Whoogle client for web search
+ * Whoogle 客户端
+ *
+ * 用于通过 Whoogle 服务进行网络搜索
+ * Whoogle 是一个隐私友好的 Google 搜索代理
+ *
+ * 功能:
+ *   - 执行网络搜索并返回结构化结果
+ *   - 支持认证配置
+ *   - 支持多种搜索参数（地区、语言、分页等）
+ *   - 连接测试功能
  */
 import { requestUrl } from 'obsidian';
 
+/**
+ * Whoogle 配置
+ */
 export interface WhoogleConfig {
 	whoogleUrl: string;
 	authEnabled: boolean;
 	authKey: string;
 }
 
+/**
+ * 搜索参数
+ */
 export interface WhoogleSearchParams {
-	query: string;
-	pageno?: number;
-	gl?: string;
-	hl?: string;
+	query: string;        // 搜索关键词
+	pageno?: number;      // 页码，默认 1
+	gl?: string;          // 地区代码，默认 'cn'
+	hl?: string;          // 语言代码，默认 'zh-CN'
 }
 
+/**
+ * 单个搜索结果
+ */
 export interface WhoogleSearchResult {
-	title: string;
-	url: string;
-	content: string;
-	engine: string;
-	published_date?: string;
-	image_url?: string;
+	title: string;              // 标题
+	url: string;                // 链接
+	content: string;            // 摘要内容
+	engine: string;             // 搜索引擎标识
+	published_date?: string;    // 发布日期（可选）
+	image_url?: string;         // 图片链接（可选）
 }
 
+/**
+ * 搜索响应
+ */
 export interface WhoogleSearchResponse {
-	query: string;
-	number_of_results: number;
-	page: number;
-	results: WhoogleSearchResult[];
-	infoboxes?: any[];
-	suggestions?: string[];
-	related?: string[];
+	query: string;                  // 搜索关键词
+	number_of_results: number;      // 结果数量
+	page: number;                   // 当前页码
+	results: WhoogleSearchResult[]; // 搜索结果列表
+	infoboxes?: any[];              // 信息框（可选）
+	suggestions?: string[];         // 搜索建议（可选）
+	related?: string[];             // 相关搜索（可选）
 }
 
+/**
+ * Whoogle 客户端类
+ */
 export class WhoogleClient {
 	private config: WhoogleConfig;
 
 	constructor(config: WhoogleConfig) {
 		this.config = config;
+		console.log('[Whoogle Client] 初始化，URL:', config.whoogleUrl, '认证:', config.authEnabled);
 	}
 
 	/**
-	 * Perform web search using Whoogle
+	 * 执行网络搜索
 	 *
-	 * @param params - Search parameters
-	 * @returns Search results
+	 * @param params - 搜索参数
+	 * @returns 搜索结果
+	 * @throws 搜索失败时抛出错误
 	 */
 	async search(params: WhoogleSearchParams): Promise<WhoogleSearchResponse> {
 		try {
@@ -169,9 +195,9 @@ export class WhoogleClient {
 	}
 
 	/**
-	 * Test connection to Whoogle service
+	 * 测试 Whoogle 服务连接
 	 *
-	 * @returns Test result
+	 * @returns 测试结果
 	 */
 	async testConnection(): Promise<{ success: boolean; message: string }> {
 		try {

@@ -138,7 +138,10 @@ export class MemorySearchView extends ItemView {
 					apiUrl: settings.llmApiUrl,
 					apiKey: settings.llmApiKey,
 					modelName: settings.llmModelName,
-					apiType: settings.llmApiType
+					apiType: settings.llmApiType,
+					systemRules: settings.llmSystemRules,
+					contextWindow: settings.llmContextWindow,
+					maxOutputTokens: settings.llmMaxOutputTokens
 				});
 				console.log('[Search View] ✓ LLM 客户端初始化成功');
 

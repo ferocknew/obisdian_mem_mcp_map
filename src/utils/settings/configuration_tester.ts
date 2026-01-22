@@ -75,7 +75,10 @@ export class ConfigurationTester {
 				apiUrl: settings.llmApiUrl,
 				apiKey: settings.llmApiKey,
 				modelName: settings.llmModelName,
-				apiType: settings.llmApiType
+				apiType: settings.llmApiType,
+				systemRules: settings.llmSystemRules,
+				contextWindow: settings.llmContextWindow,
+				maxOutputTokens: settings.llmMaxOutputTokens
 			});
 			const result = await llmClient.testConnection();
 			console.log('[Config Tester] LLM 测试结果:', result);

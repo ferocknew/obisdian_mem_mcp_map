@@ -68,7 +68,7 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 		try {
 			const requestBody: any = {
 				model: this.config.modelName,
-				max_tokens: 4096,
+				max_tokens: (this.config.maxOutputTokens || 96) * 1024,
 				messages: messages.map(msg => ({
 					role: msg.role === 'system' ? 'user' : msg.role,
 					content: msg.content
@@ -165,7 +165,7 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 		try {
 			const requestBody: any = {
 				model: this.config.modelName,
-				max_tokens: 4096,
+				max_tokens: (this.config.maxOutputTokens || 96) * 1024,
 				stream: true,
 				messages: messages.map(msg => ({
 					role: msg.role === 'system' ? 'user' : msg.role,

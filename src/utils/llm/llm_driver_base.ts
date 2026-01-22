@@ -21,6 +21,8 @@ export interface LLMDriverConfig {
 	apiKey: string;
 	modelName: string;
 	systemRules?: string;
+	contextWindow?: number;
+	maxOutputTokens?: number;
 }
 
 export interface ChatMessage {
