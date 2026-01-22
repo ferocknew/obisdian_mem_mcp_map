@@ -1,6 +1,7 @@
 import { App, Component } from 'obsidian';
 import { LLMClient } from '@/llm_client';
 import { WhoogleClient } from '@/utils/tools/whoogle';
+import { APIClient } from '@/utils/api/api_client';
 import { ToolExecutor } from '@/utils/tools/tool_executor';
 import { ChatStateManager } from '@/utils/chat/chat_state';
 import { ChatUIManager } from '@/utils/chat/chat_ui';
@@ -128,6 +129,14 @@ export class ChatView {
 		this.dependencies.whoogleClient = client;
 		this.dependencies.toolExecutor.setWhoogleClient(client);
 		console.log('[Chat View] Whoogle 客户端已', client ? '设置' : '清空');
+	}
+
+	/**
+	 * 设置 API 客户端（记忆图谱）
+	 */
+	setAPIClient(client: APIClient | null): void {
+		this.dependencies.toolExecutor.setAPIClient(client);
+		console.log('[Chat View] API 客户端已', client ? '设置' : '清空');
 	}
 
 	/**

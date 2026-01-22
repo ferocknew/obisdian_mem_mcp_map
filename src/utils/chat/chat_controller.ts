@@ -5,6 +5,7 @@ import { ChatUIManager } from '@/utils/chat/chat_ui';
 import { ChatDependencies } from '@/utils/chat/chat_types';
 import { ChatToolHandler } from '@/utils/chat/chat_tool_handler';
 import { getAvailableTools } from '@/utils/tools/tool_definitions';
+import { isNoiseResponse, hasSubstantiveAnalysis } from '@/utils/chat/response_filter';
 
 /**
  * 聊天控制器
@@ -37,6 +38,32 @@ export class ChatController {
 				throw new Error('没有可读取的文档');
 			}
 			return contextFile.content;
+		});
+
+		// 设置全局搜索回调
+		this.dependencies.toolExecutor.setGlobalSearchCallback(async (query: string, limit: number) => {
+			const results = await this.dependencies.app.vault.cachedRead({});
+			// 使用 Obsidian 的全局搜索 API
+			const searchResults = this.dependencies.app.vault.getMarkdownFiles()
+				.filter(file => file.path.toLowerCase().includes(query.toLowerCase()))
+				.slice(0, limit)
+				.map(file => ({
+					path: file.path,
+					name: file.name,
+					content: ''  // 实际使用时可以读取内容
+				}));
+
+			return { results: searchResults };
+		});
+
+		// 设置打开文件回调
+		this.dependencies.toolExecutor.setOpenFileCallback(async (path: string) => {
+			const file = this.dependencies.app.vault.getAbstractFileByPath(path);
+			if (file) {
+				await this.dependencies.app.workspace.getLeaf(false).openFile(file);
+			} else {
+				throw new Error(`文件不存在: ${path}`);
+			}
 		});
 
 		this.setupEventListeners();
@@ -338,18 +365,29 @@ export class ChatController {
 		if (finalResponse.success && finalResponse.toolCalls && finalResponse.toolCalls.length > 0) {
 			console.log('[Chat Controller] ✓ AI 再次请求调用工具，数量:', finalResponse.toolCalls.length);
 
-			// 如果同时返回了文本内容，先显示
+			// 如果同时返回了文本内容，先显示（过滤无意义回复）
 			if (finalResponse.message && finalResponse.message.trim()) {
-				await this.ui.addMarkdownMessage('assistant', finalResponse.message);
-				console.log('[Chat Controller] ✓ 已显示 AI 的文本内容');
+				if (!isNoiseResponse(finalResponse.message, results)) {
+					await this.ui.addMarkdownMessage('assistant', finalResponse.message);
+					console.log('[Chat Controller] ✓ 已显示 AI 的文本内容');
+				} else {
+					console.log('[Chat Controller] ⊘ 过滤无意义回复:', finalResponse.message.substring(0, 50));
+				}
 			}
 
 			// 递归处理新的工具调用
 			await this.handleToolCalls(finalResponse.toolCalls, tools);
 		} else if (finalResponse.success && finalResponse.message) {
-			// 没有工具调用，显示最终回复
-			await this.ui.addMarkdownMessage('assistant', finalResponse.message);
-			this.state.addMessage({ role: 'assistant', content: finalResponse.message });
+			// 没有工具调用，显示最终回复（过滤无意义回复）
+			if (!isNoiseResponse(finalResponse.message, results)) {
+				await this.ui.addMarkdownMessage('assistant', finalResponse.message);
+				this.state.addMessage({ role: 'assistant', content: finalResponse.message });
+				console.log('[Chat Controller] ✓ 显示最终回复，长度:', finalResponse.message.length);
+			} else {
+				console.log('[Chat Controller] ⊘ 过滤无意义的最终回复');
+				// 工具结果已显示，无需额外提示
+				this.state.addMessage({ role: 'assistant', content: '[已过滤无意义回复]' });
+			}
 		} else if (!finalResponse.success) {
 			// 如果第二次请求也失败,显示错误
 			const errorMsg = `抱歉,处理工具结果时出错: ${finalResponse.error || '未知错误'}`;

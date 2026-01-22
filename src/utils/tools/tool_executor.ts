@@ -1,66 +1,83 @@
 /**
- * 工具执行器
+ * 工具执行器 - 主入口
  *
  * 负责执行 LLM 请求的工具调用，包括:
  *   - whoogle_search: 网络搜索
  *   - update_chat_title: 修改聊天标题
+ *   - read_doc: 读取当前文档
+ *   - obsidian_global_search: Obsidian 全局搜索
+ *   - web_fetch: Web 抓取
+ *   - obsidian_open_file: 打开文档
+ *   - memory_*: 记忆图谱工具（13个）
  *
  * 架构说明:
- *   - 通过依赖注入设置外部客户端和回调
+ *   - 通过组合模式委托给专门的执行器
  *   - 支持批量执行多个工具调用
  *   - 统一的错误处理和日志记录
  */
 
-import { WhoogleClient, WhoogleSearchResponse } from './whoogle';
 import { ToolCall } from '../llm/llm_driver_base';
+import { WhoogleClient } from './whoogle';
+import { APIClient } from '@/utils/api/api_client';
+import { ToolExecutorBasic } from './tool_executor_basic';
+import { ToolExecutorMemory } from './tool_executor_memory';
+import { ToolExecutionResult } from './tool_executor_base';
 
 /**
- * 工具执行结果
- */
-export interface ToolExecutionResult {
-	success: boolean;
-	toolName: string;
-	result?: any;
-	error?: string;
-	displayText?: string;
-}
-
-/**
- * 工具执行器类
+ * 工具执行器主类
+ *
+ * 采用组合模式，委托给专门的执行器处理不同类型的工具
  */
 export class ToolExecutor {
-	private whoogleClient: WhoogleClient | null = null;
-	private updateTitleCallback: ((title: string) => void) | null = null;
-	private readDocCallback: (() => Promise<string>) | null = null;
+	private basicExecutor: ToolExecutorBasic;
+	private memoryExecutor: ToolExecutorMemory;
+
+	constructor() {
+		this.basicExecutor = new ToolExecutorBasic();
+		this.memoryExecutor = new ToolExecutorMemory();
+	}
 
 	/**
 	 * 设置 Whoogle 客户端
-	 *
-	 * @param client - Whoogle 客户端实例，null 表示清空
 	 */
 	setWhoogleClient(client: WhoogleClient | null): void {
-		this.whoogleClient = client;
-		console.log('[Tool Executor] Whoogle 客户端已', client ? '设置' : '清空');
+		this.basicExecutor.setWhoogleClient(client);
+	}
+
+	/**
+	 * 设置 API 客户端（记忆图谱）
+	 */
+	setAPIClient(client: APIClient | null): void {
+		this.basicExecutor.setAPIClient(client);
+		this.memoryExecutor.setAPIClient(client);
 	}
 
 	/**
 	 * 设置标题更新回调
-	 *
-	 * @param callback - 标题更新回调函数，null 表示清空
 	 */
 	setUpdateTitleCallback(callback: ((title: string) => void) | null): void {
-		this.updateTitleCallback = callback;
-		console.log('[Tool Executor] 标题更新回调已', callback ? '设置' : '清空');
+		this.basicExecutor.setUpdateTitleCallback(callback);
 	}
 
 	/**
 	 * 设置文档读取回调
-	 *
-	 * @param callback - 文档读取回调函数，null 表示清空
 	 */
 	setReadDocCallback(callback: (() => Promise<string>) | null): void {
-		this.readDocCallback = callback;
-		console.log('[Tool Executor] 文档读取回调已', callback ? '设置' : '清空');
+		this.basicExecutor.setReadDocCallback(callback);
+	}
+
+	/**
+	 * 设置全局搜索回调
+	 */
+	setGlobalSearchCallback(callback: ((query: string, limit: number) => Promise<any>) | null): void {
+		this.basicExecutor.setGlobalSearchCallback(callback);
+	}
+
+	/**
+	 * 设置打开文件回调
+	 */
+	setOpenFileCallback(callback: ((path: string) => Promise<void>) | null): void {
+		this.basicExecutor.setOpenFileCallback(callback);
 	}
 
 	/**
@@ -76,21 +93,66 @@ export class ToolExecutor {
 		console.log(`[Tool Executor] 执行工具: ${functionName}，参数:`, args);
 
 		try {
+			// 基础工具
 			switch (functionName) {
 				case 'whoogle_search':
-					return await this.executeWhoogleSearch(args);
+					return await this.basicExecutor.executeWhoogleSearch(args);
 				case 'update_chat_title':
-					return await this.executeUpdateChatTitle(args);
+					return await this.basicExecutor.executeUpdateChatTitle(args);
 				case 'read_doc':
-					return await this.executeReadDoc(args);
-				default:
-					console.error(`[Tool Executor] ✗ 未知的工具: ${functionName}`);
-					return {
-						success: false,
-						toolName: functionName,
-						error: `未知的工具: ${functionName}`
-					};
+					return await this.basicExecutor.executeReadDoc(args);
+				case 'obsidian_global_search':
+					return await this.basicExecutor.executeObsidianGlobalSearch(args);
+				case 'web_fetch':
+					return await this.basicExecutor.executeWebFetch(args);
+				case 'obsidian_open_file':
+					return await this.basicExecutor.executeObsidianOpenFile(args);
 			}
+
+			// 记忆图谱工具
+			switch (functionName) {
+				// 创建类工具
+				case 'memory_create_entities':
+					return await this.memoryExecutor.executeCreateEntities(args);
+				case 'memory_add_observations':
+					return await this.memoryExecutor.executeAddObservations(args);
+				case 'memory_create_relations':
+					return await this.memoryExecutor.executeCreateRelations(args);
+
+				// 搜索类工具
+				case 'memory_search_nodes':
+					return await this.memoryExecutor.executeSearchNodes(args);
+				case 'memory_semantic_search':
+					return await this.memoryExecutor.executeSemanticSearch(args);
+				case 'memory_read_graph':
+					return await this.memoryExecutor.executeReadGraph(args);
+				case 'memory_open_nodes':
+					return await this.memoryExecutor.executeOpenNodes(args);
+
+				// 删除类工具
+				case 'memory_delete_entities':
+					return await this.memoryExecutor.executeDeleteEntities(args);
+				case 'memory_delete_observations':
+					return await this.memoryExecutor.executeDeleteObservations(args);
+				case 'memory_delete_relations':
+					return await this.memoryExecutor.executeDeleteRelations(args);
+
+				// 管理类工具
+				case 'memory_generate_embeddings':
+					return await this.memoryExecutor.executeGenerateEmbeddings(args);
+				case 'memory_view_trash':
+					return await this.memoryExecutor.executeViewTrash(args);
+				case 'memory_restore_deleted':
+					return await this.memoryExecutor.executeRestoreDeleted(args);
+			}
+
+			// 未知工具
+			console.error(`[Tool Executor] ✗ 未知的工具: ${functionName}`);
+			return {
+				success: false,
+				toolName: functionName,
+				error: `未知的工具: ${functionName}`
+			};
 		} catch (error) {
 			console.error(`[Tool Executor] ✗ 工具执行异常:`, error);
 			return {
@@ -99,166 +161,6 @@ export class ToolExecutor {
 				error: error.message
 			};
 		}
-	}
-
-	/**
-	 * 执行 Whoogle 搜索
-	 *
-	 * @param args - 搜索参数 { query: string, pageno?: number }
-	 * @returns 搜索结果
-	 */
-	private async executeWhoogleSearch(args: any): Promise<ToolExecutionResult> {
-		if (!this.whoogleClient) {
-			return {
-				success: false,
-				toolName: 'whoogle_search',
-				error: 'Whoogle 客户端未配置'
-			};
-		}
-
-		try {
-			console.log('[Tool Executor] 开始 Whoogle 搜索，关键词:', args.query);
-
-			const response = await this.whoogleClient.search({
-				query: args.query,
-				pageno: args.pageno || 1
-			});
-
-			console.log('[Tool Executor] ✓ 搜索完成，结果数量:', response.number_of_results);
-
-			// 格式化搜索结果
-			const formattedResults = this.formatSearchResults(response);
-
-			return {
-				success: true,
-				toolName: 'whoogle_search',
-				result: response,
-				displayText: `找到 ${response.number_of_results} 条搜索结果`
-			};
-		} catch (error) {
-			console.error('[Tool Executor] ✗ Whoogle 搜索失败:', error);
-			return {
-				success: false,
-				toolName: 'whoogle_search',
-				error: error.message
-			};
-		}
-	}
-
-	/**
-	 * 执行修改聊天标题
-	 *
-	 * @param args - 标题参数 { title: string }
-	 * @returns 执行结果
-	 */
-	private async executeUpdateChatTitle(args: any): Promise<ToolExecutionResult> {
-		if (!this.updateTitleCallback) {
-			return {
-				success: false,
-				toolName: 'update_chat_title',
-				error: '标题更新回调未配置'
-			};
-		}
-
-		try {
-			const newTitle = args.title?.trim();
-
-			if (!newTitle) {
-				return {
-					success: false,
-					toolName: 'update_chat_title',
-					error: '标题不能为空'
-				};
-			}
-
-			console.log('[Tool Executor] 更新聊天标题:', newTitle);
-
-			// 调用回调函数更新标题
-			this.updateTitleCallback(newTitle);
-
-			return {
-				success: true,
-				toolName: 'update_chat_title',
-				result: { title: newTitle },
-				displayText: `已将标题修改为: ${newTitle}`
-			};
-		} catch (error) {
-			console.error('[Tool Executor] ✗ 更新标题失败:', error);
-			return {
-				success: false,
-				toolName: 'update_chat_title',
-				error: error.message
-			};
-		}
-	}
-
-	/**
-	 * 执行读取文档
-	 *
-	 * @param args - 参数（空对象）
-	 * @returns 执行结果
-	 */
-	private async executeReadDoc(args: any): Promise<ToolExecutionResult> {
-		if (!this.readDocCallback) {
-			return {
-				success: false,
-				toolName: 'read_doc',
-				error: '文档读取回调未配置'
-			};
-		}
-
-		try {
-			console.log('[Tool Executor] 读取当前文档内容');
-
-			const content = await this.readDocCallback();
-
-			if (!content || content.trim() === '') {
-				return {
-					success: false,
-					toolName: 'read_doc',
-					error: '文档内容为空或不存在'
-				};
-			}
-
-			console.log('[Tool Executor] ✓ 文档读取成功，长度:', content.length);
-
-			return {
-				success: true,
-				toolName: 'read_doc',
-				result: { content },
-				displayText: `已读取文档内容（${content.length} 字符）`
-			};
-		} catch (error) {
-			console.error('[Tool Executor] ✗ 读取文档失败:', error);
-			return {
-				success: false,
-				toolName: 'read_doc',
-				error: error.message
-			};
-		}
-	}
-
-	/**
-	 * 格式化搜索结果为文本
-	 *
-	 * @param response - Whoogle 搜索响应
-	 * @returns 格式化后的文本（只显示前 6 个结果）
-	 */
-	private formatSearchResults(response: WhoogleSearchResponse): string {
-		let text = `搜索关键词: ${response.query}\n`;
-		text += `找到 ${response.number_of_results} 条结果\n`;
-
-		// 只显示前 6 个结果
-		const displayResults = response.results.slice(0, 6);
-
-		displayResults.forEach((result, index) => {
-			text += `${index + 1}. [${result.title}](${result.url})\n`;
-			if (result.content) {
-				text += `   ${result.content}\n`;
-			}
-		});
-
-		return text;
 	}
 
 	/**

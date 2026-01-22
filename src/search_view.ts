@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import MemoryGraphPlugin from '@/main';
-import { APIClient } from '@/api_client';
+import { APIClient } from '@/utils/api/api_client';
 import { ChatView } from '@/utils/pages/chat_view';
 import { SearchPageView } from '@/utils/pages/search';
 import { LLMClient } from '@/llm_client';
@@ -105,6 +105,11 @@ export class MemorySearchView extends ItemView {
 			this.chatView.setWhoogleClient(this.whoogleClient);
 		}
 
+		// 设置 API 客户端到聊天视图（记忆图谱工具）
+		if (this.apiClient) {
+			this.chatView.setAPIClient(this.apiClient);
+		}
+
 		// 默认隐藏聊天界面
 		this.chatView.hide();
 
@@ -125,6 +130,11 @@ export class MemorySearchView extends ItemView {
 					apiKey: settings.mcpApiKey
 				});
 				console.log('[Search View] API 客户端初始化成功');
+
+				// 如果聊天视图已创建，更新其 API 客户端
+				if (this.chatView) {
+					this.chatView.setAPIClient(this.apiClient);
+				}
 			} else {
 				console.warn('[Search View] 未配置 API 地址');
 			}

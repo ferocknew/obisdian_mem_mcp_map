@@ -1,7 +1,7 @@
 import { App } from 'obsidian';
-import { APIClient } from '../../api_client';
-import { LLMClient } from '../../llm_client';
-import { MemoryGraphSettings } from '../../settings';
+import { APIClient } from '@/utils/api/api_client';
+import { LLMClient } from '@/llm_client';
+import { MemoryGraphSettings } from '@/settings';
 
 export interface TestResult {
 	success: boolean;
