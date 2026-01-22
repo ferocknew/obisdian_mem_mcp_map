@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-这是一个 Obsidian 插件项目,用于创建本地记忆图谱并与知识图谱记忆服务（Memory Server）交互。插件允许用户在 Obsidian 中配置和连接到记忆服务的 OpenAPI 接口,实现实体、关系、观察记录的管理和语义搜索功能。
+这是一个 Obsidian 插件项目,用于创建本地记忆图谱并与知识图谱记忆服务（Memory Server）交互。插件集成了 AI 聊天功能,支持 Function Calling 实现联网搜索、实体关系管理等智能化操作。
 
 ## 开发环境要求
 
@@ -31,15 +31,45 @@ pnpm version
 ## 项目结构
 
 ```
-obisdian_mem_mcp_map/
-├── src/
-│   ├── main.ts           # 插件主入口,继承自 Obsidian Plugin 类
-│   ├── settings.ts       # 设置界面和配置管理
-│   ├── api_client.ts     # API 客户端封装,处理与记忆服务的 HTTP 通信
-│   └── search_view.ts    # 记忆图谱搜索视图,提供关键词和向量搜索界面
-├── esbuild.config.mjs    # esbuild 构建配置
-├── manifest.json         # Obsidian 插件清单
-└── package.json         # 项目依赖配置
+src/
+├── main.ts                    # 插件主入口
+├── settings.ts                # 设置界面和配置管理
+├── api_client.ts              # 记忆服务 API 客户端
+├── llm_client.ts              # LLM 客户端统一接口
+├── search_view.ts             # 记忆图谱搜索侧边栏视图
+├── types.d.ts                 # TypeScript 类型声明
+│
+├── utils/
+│   ├── chat/                  # AI 聊天模块 (MVC 架构)
+│   │   ├── chat_view.ts       # 对外接口
+│   │   ├── chat_controller.ts # 业务逻辑控制器
+│   │   ├── chat_ui.ts         # UI 管理器
+│   │   ├── chat_state.ts      # 状态管理器
+│   │   └── chat_types.ts      # 类型定义
+│   │
+│   ├── llm/                   # LLM 驱动层
+│   │   ├── llm_driver_base.ts    # 驱动基类和接口定义
+│   │   ├── llm_driver_anthropic.ts # Anthropic API 驱动
+│   │   └── llm_driver_openai.ts     # OpenAI API 驱动
+│   │
+│   ├── tools/                 # Function Calling 工具
+│   │   ├── tool_executor.ts   # 工具执行器
+│   │   ├── tool_definitions.ts # 工具定义
+│   │   └── whoogle.ts         # Whoogle 搜索客户端
+│   │
+│   ├── pages/                 # 页面组件
+│   │   ├── search.ts          # 搜索页面实现
+│   │   ├── settings.ts        # 设置页面实现
+│   │   └── chat_view.css.ts   # 聊天界面样式
+│   │
+│   ├── search/                # 搜索相关
+│   │   ├── search_result_processor.ts # 搜索结果处理
+│   │   ├── markdown_generator.ts      # Markdown 生成器
+│   │   └── entity_file_manager.ts    # 实体文件管理
+│   │
+│   └── settings/              # 设置相关
+│       ├── configuration_tester.ts # 配置测试器
+│       └── test_results_displayer.ts # 测试结果显示器
 ```
 
 ## 核心架构
@@ -48,120 +78,185 @@ obisdian_mem_mcp_map/
 
 1. **MemoryGraphPlugin** (`src/main.ts`)
    - 继承自 Obsidian 的 `Plugin` 类
-   - 管理插件生命周期: `onload()` 和 `onunload()`
-   - 负责加载和保存设置
-   - 注册 ribbon 图标和命令
+   - 管理插件生命周期、设置加载、右键菜单注册
+   - 注册 `VIEW_TYPE_MEMORY_SEARCH` 视图类型
 
-2. **MemoryGraphSettingTab** (`src/settings.ts`)
-   - Obsidian 设置页面的实现
-   - 提供三个主要设置:
-     - 同步目标目录选择器(从 vault 根目录获取文件夹列表)
-     - Mem 服务器 API 地址(OpenAPI URL)
-     - 服务器 API Key(可选的认证密钥)
-   - 集成 APIClient 来测试连接并显示可用的 API 接口
+2. **MemorySearchView** (`src/search_view.ts`)
+   - 侧边栏视图,包含标签页切换(关键词搜索、向量搜索、AI 聊天)
+   - 初始化三个客户端: APIClient、LLMClient、WhoogleClient
+   - 负责客户端配置的读取和传递
 
-3. **APIClient** (`src/api_client.ts`)
-   - 封装 HTTP 客户端,使用 Obsidian 的 `requestUrl` API
-   - 连接到知识图谱记忆服务的 OpenAPI 接口
-   - 提供实体、关系、搜索等操作方法
-   - 支持 Bearer Token 认证
+### AI 聊天系统 (MVC 架构)
 
-4. **MemorySearchView** (`src/search_view.ts`)
-   - 自定义侧边栏视图,提供记忆图谱搜索界面
-   - 支持两种搜索模式:
-     - 关键词搜索: 精确匹配实体名称、类型和观察记录
-     - 向量搜索: 基于语义相似度的模糊搜索
-   - 搜索结果可点击生成或同步本地 Markdown 文件
-   - 自动生成实体文件夹结构: `<实体名>/<实体名>.md` 和 `<实体名>/观察/*.md`
-   - 支持从图谱数据生成包含关系链接的 Markdown 文件
+位于 `src/utils/chat/`,采用严格的关注点分离:
 
-### API 配置格式
+- **chat_types.ts**: 所有接口和类型定义
+  - `ChatConfig`: 聊天配置
+  - `ChatState`: 聊天状态
+  - `UIElements`: UI 元素引用
+  - `ChatDependencies`: 组件依赖注入
 
-插件配置示例:
+- **chat_state.ts**: 状态管理器
+  - 消息历史管理
+  - 标题、功能开关管理
+  - 生成状态和 AbortController 管理
 
-- **API 地址**: `https://aimem.n.6do.me:8086/openapi.json`
-- **API Key**: 可选的 Bearer Token
+- **chat_ui.ts**: UI 管理器
+  - 创建所有界面元素
+  - 消息渲染(支持 Markdown)
+  - 按钮状态更新
+  - 使用 Obsidian 的 `setIcon` 设置图标
 
-### 可用的 API 接口
+- **chat_controller.ts**: 业务逻辑控制器
+  - 处理消息发送和停止
+  - 协调 ToolExecutor 执行工具调用
+  - 处理搜索结果注入上下文并二次请求 AI
+  - 标题编辑、新建聊天等交互
 
-记忆服务提供以下主要功能:
+- **chat_view.ts**: 对外接口
+  - 保持向后兼容的 API
+  - 组合 State、UI、Controller
+  - 提供简洁的 `setLLMClient()` 和 `setWhoogleClient()` 方法
 
-**实体管理**:
-- `POST /tools/entities/create` - 创建实体
-- `POST /tools/entities/add_observations` - 添加观察记录
-- `POST /tools/entities/delete` - 删除实体
-- `POST /tools/entities/delete_observations` - 删除观察记录
+### LLM 客户端架构
 
-**关系管理**:
-- `POST /tools/relations/create` - 创建关系
-- `POST /tools/relations/delete` - 删除关系
+位于 `src/utils/llm/`,支持多个 AI 提供商:
 
-**搜索功能**:
-- `GET /tools/search/read_graph` - 读取完整图谱(支持分页)
-- `GET /tools/search/nodes` - 关键词精确搜索
-- `POST /tools/search/open` - 按名称检索节点
-- `GET /tools/search/semantic` - 语义相似度搜索
-- `POST /tools/search/embeddings` - 生成向量
+- **llm_driver_base.ts**: 抽象基类
+  - 定义统一的接口: `sendMessage()`, `sendMessageStream()`, `testConnection()`
+  - 定义数据结构: `ChatMessage`, `ChatResponse`, `ToolCall`, `StreamChunk`
+  - 支持 tools 参数传递给 AI
 
-**回收站**:
-- `GET /tools/trash/view` - 查看回收站
-- `POST /tools/trash/restore` - 恢复已删除内容
+- **llm_driver_anthropic.ts**: Anthropic Claude 实现
+  - 完整的请求/响应日志记录
+  - 支持 tool_use 类型的 function calling
+  - 错误处理和连接测试
+
+- **llm_driver_openai.ts**: OpenAI/兼容 API 实现
+  - 支持标准 OpenAI 函数调用格式
+  - 完整的调试日志
+  - AbortController 支持请求中止
+
+- **llm_client.ts**: 统一客户端
+  - 根据 `apiType` 选择驱动实现
+  - 管理 AbortController 生命周期
+  - 提供 `abort()` 方法用于停止生成
+
+### Function Calling 系统
+
+位于 `src/utils/tools/`:
+
+- **tool_definitions.ts**: 工具定义
+  - `getAvailableTools(webSearchEnabled)`: 动态返回可用工具列表
+  - 定义 `whoogle_search` 工具的 schema
+  - 易于扩展新工具
+
+- **tool_executor.ts**: 工具执行器
+  - `executeToolCall(toolCall)`: 执行单个工具
+  - `executeWhoogleSearch(args)`: 执行搜索并格式化结果
+  - `formatSearchResults()`: 将结果转为可读文本
+
+- **whoogle.ts**: Whoogle 搜索客户端
+  - 支持认证配置
+  - 处理不同响应格式
+  - 连接测试功能
+
+### Function Calling 工作流程
+
+```
+用户发送消息
+  ↓
+ChatController.handleSendMessage()
+  ↓
+LLMClient.sendMessage(messages, tools) → AI API
+  ↓
+AI 返回 tool_calls
+  ↓
+ChatController.handleToolCalls()
+  ↓
+ToolExecutor.executeToolCall() → WhoogleClient.search()
+  ↓
+将搜索结果添加到消息历史
+  ↓
+LLMClient.sendMessage() → 再次请求 AI
+  ↓
+基于搜索结果生成最终回复
+  ↓
+ChatUIManager.addMarkdownMessage() → 渲染回复
+```
+
+## 路径别名系统
+
+项目使用 `@/` 作为 `src/` 的别名:
+
+```typescript
+// ✅ 正确
+import { ChatView } from '@/utils/chat/chat_view';
+import { LLMClient } from '@/llm_client';
+
+// ❌ 错误 (不要使用相对路径)
+import { ChatView } from '../../utils/chat/chat_view';
+```
+
+esbuild 配置(`aliasPlugin`)处理路径解析,tsconfig.json 映射类型定义。
+
+## 按钮状态管理
+
+发送按钮根据 `isGenerating` 状态动态切换:
+- **空闲状态**: 显示"发送",蓝色背景
+- **生成中**: 显示"停止",红色背景(`ai-chat-stop-button`类)
+- 点击停止时调用 `AbortController.abort()` 中止请求
+
+## UI 渲染规范
+
+- **图标**: 必须使用 Obsidian 的 `setIcon(element, iconId)` 函数
+- **Markdown**: 使用 `MarkdownRenderer.render(app, content, container, sourcePath, component)`
+- **样式**: CSS 定义在 `*.css.ts` 文件中,通过 `export const styles = \`...\`` 导出
+
+## 配置管理
+
+插件设置(`MemoryGraphSettings`)包含:
+- LLM API: `llmApiUrl`, `llmApiKey`, `llmModelName`, `llmApiType`, `llmSystemRules`
+- 搜索配置: `searchWhoogleUrl`, `searchAuthEnabled`, `searchAuthKey`
+- 记忆服务: `mcpApiUrl`, `mcpApiKey`, `syncTargetFolder`
+
+所有客户端在 `MemorySearchView.onOpen()` 中初始化并设置到 ChatView。
+
+## Console 日志规范
+
+所有日志带前缀标识:
+- `[Chat Controller]`: 聊天控制器逻辑
+- `[Chat State]`: 状态管理
+- `[Chat UI]`: UI 操作
+- `[LLM Client]`: LLM 客户端
+- `[Anthropic Driver]` / `[OpenAI Driver]`: 驱动层
+- `[Tool Executor]`: 工具执行
+- `[Whoogle Client]`: 搜索客户端
+- `[Search View]`: 搜索视图
+
+详细日志包括:
+- `>>> 请求内容:` (JSON)
+- `<<< 响应内容:` (JSON)
+- 工具调用参数和结果
 
 ## 构建系统
 
 - **打包工具**: esbuild
 - **入口文件**: `src/main.ts`
 - **输出文件**: `main.js` (CommonJS 格式)
-- **外部依赖**: obsidian, electron, CodeMirror 相关包等
-- **Source Maps**: 开发模式启用 inline sourcemap
-
-## 开发调试
-
-1. 运行 `pnpm dev` 启动开发模式
-2. 在 Obsidian 中打开开发者控制台查看日志:
-   - macOS: `Cmd + Option + I`
-   - Windows/Linux: `Ctrl + Shift + I`
-3. 修改代码后按 `Cmd/Ctrl + R` 重新加载 Obsidian
-4. 详细调试指南参见 `DEBUG.md`
-
-## 代码规范
-
-- **TypeScript 配置**:
-  - 目标: ES6
-  - 模块: ESNext
-  - 启用严格模式: `noImplicitAny`, `strictNullChecks`
-  - 模块解析: node
-
-- **命名约定**:
-  - 文件名: 小写,使用下划线分隔 (如: `api_client.ts`)
-  - 类名: PascalCase (如: `APIClient`)
-  - 函数/方法: camelCase (如: `testConnection`)
-
-## Markdown 文件生成规则
-
-搜索视图会根据图谱数据自动生成本地 Markdown 文件:
-
-1. **文件结构**:
-   - 主实体文件: `<同步目录>/<实体名>/<实体名>.md`
-   - 观察文件: `<同步目录>/<实体名>/观察/<观察标题>.md`
-
-2. **主实体文件内容**:
-   - Frontmatter: 包含 title, id, tags, keywords, relations
-   - 基本信息: 创建时间、观察数量
-   - 关联关系: 使用 `[[目标实体]]` 格式的双向链接
-   - 观察列表: 链接到观察文件
-
-3. **观察文件内容**:
-   - 观察内容文本
-   - 反向链接到主实体
+- **外部依赖**: obsidian, electron, CodeMirror 等
+- **插件**: CSS loader (将 `.css` 转为 JS 模块), Alias resolver (支持 `@/` 路径)
+- **Source Maps**: 开发模式 inline, 生产模式关闭
 
 ## 关键注意事项
 
-- 使用 pnpm 而非 npm
-- 修改代码后需要重新加载 Obsidian 才能生效
-- API 连接使用 HTTPS 协议,通过 Obsidian 的 `requestUrl` 绕过 CORS 限制
-- 设置页面会动态验证 API 配置并尝试连接服务器
-- 支持 Bearer Token 认证方式
-- 所有 console.log 带有前缀标识: `[API Client]`, `[Settings]`, `[Search View]`, `[Generate MD]`, `[Resync MD]`
-- 搜索视图使用 `VIEW_TYPE_MEMORY_SEARCH` 作为视图类型标识
-- 文件名中的特殊字符会被自动移除以避免文件系统问题
+- **必须使用 pnpm**,不支持 npm
+- **路径导入统一使用 `@/` 别名**,避免相对路径
+- **图标必须用 Obsidian 的 `setIcon()`**,不要自定义 SVG
+- **修改代码后需重新加载 Obsidian** (`Cmd/Ctrl + R`)
+- **ChatView 的依赖通过构造函数注入**,后期用 `setLLMClient()` / `setWhoogleClient()` 更新
+- **Function Calling 需要 WhoogleClient 配置**,否则工具执行失败
+- **停止生成使用 AbortController**,需同时设置到 LLMClient 和检查中止信号
+- **Markdown 渲染需传入 app 实例**,不是 component.app
+- **文件命名**: 小写+下划线 (如 `api_client.ts`, `chat_view.ts`)
+- **类命名**: PascalCase (如 `LLMClient`, `ChatController`)

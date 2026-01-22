@@ -13,6 +13,10 @@ export interface MemoryGraphSettings {
 	llmApiKey: string;
 	llmModelName: string;
 	llmApiType: 'anthropic' | 'openai';
+	llmSystemRules: string;
+	searchWhoogleUrl: string;
+	searchAuthEnabled: boolean;
+	searchAuthKey: string;
 }
 
 export const DEFAULT_SETTINGS: MemoryGraphSettings = {
@@ -22,7 +26,11 @@ export const DEFAULT_SETTINGS: MemoryGraphSettings = {
 	llmApiUrl: '',
 	llmApiKey: '',
 	llmModelName: '',
-	llmApiType: 'anthropic'
+	llmApiType: 'anthropic',
+	llmSystemRules: '',
+	searchWhoogleUrl: '',
+	searchAuthEnabled: false,
+	searchAuthKey: ''
 }
 
 export class MemoryGraphSettingTab extends PluginSettingTab {
@@ -191,10 +199,76 @@ export class MemoryGraphSettingTab extends PluginSettingTab {
 				});
 			});
 
+		// SYSTEM 规则
+		new Setting(containerEl)
+			.setName('SYSTEM 规则')
+			.setDesc('输入 LLM 的系统提示词规则（支持多行）')
+			.addTextArea(text => {
+				text.setValue(this.plugin.settings.llmSystemRules || '');
+				text.setPlaceholder('请输入系统规则...');
+				text.inputEl.rows = 10;
+				text.inputEl.cols = 50;
+				text.onChange(async (value) => {
+					this.plugin.settings.llmSystemRules = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
 		// 横线分隔
 		const llmSeparatorEl = containerEl.createEl('hr');
 		llmSeparatorEl.style.marginTop = '20px';
 		llmSeparatorEl.style.marginBottom = '20px';
+
+		// 搜索工具配置
+		containerEl.createEl('h3', { text: '搜索工具配置' });
+
+		// Whoogle URL
+		new Setting(containerEl)
+			.setName('Whoogle URL')
+			.setDesc('输入 Whoogle 搜索服务的 URL（例如: https://search.example.com）')
+			.addText(text => {
+				text.setValue(this.plugin.settings.searchWhoogleUrl || '');
+				text.setPlaceholder('https://search.example.com');
+				text.onChange(async (value) => {
+					this.plugin.settings.searchWhoogleUrl = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// 启用验证
+		new Setting(containerEl)
+			.setName('启用身份验证')
+			.setDesc('是否在请求头中添加 Authorization Bearer Token')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.searchAuthEnabled || false);
+				toggle.onChange(async (value) => {
+					this.plugin.settings.searchAuthEnabled = value;
+					await this.plugin.saveSettings();
+					// 刷新界面以显示/隐藏验证 Key 输入框
+					this.display();
+				});
+			});
+
+		// 验证 Key（仅在启用验证时显示）
+		if (this.plugin.settings.searchAuthEnabled) {
+			new Setting(containerEl)
+				.setName('验证 Key')
+				.setDesc('输入 Bearer Token 验证密钥')
+				.addText(text => {
+					text.setValue(this.plugin.settings.searchAuthKey || '');
+					text.setPlaceholder('your-bearer-token');
+					text.inputEl.type = 'password';
+					text.onChange(async (value) => {
+						this.plugin.settings.searchAuthKey = value;
+						await this.plugin.saveSettings();
+					});
+				});
+		}
+
+		// 横线分隔
+		const searchSeparatorEl = containerEl.createEl('hr');
+		searchSeparatorEl.style.marginTop = '20px';
+		searchSeparatorEl.style.marginBottom = '20px';
 
 		// 保存配置按钮
 		new Setting(containerEl)

@@ -8,16 +8,60 @@ export interface LLMDriverConfig {
 	apiUrl: string;
 	apiKey: string;
 	modelName: string;
+	systemRules?: string;
 }
+
+export interface ChatMessage {
+	role: 'user' | 'assistant' | 'system';
+	content: string | any[];
+}
+
+export interface ToolCall {
+	id: string;
+	type: 'function';
+	function: {
+		name: string;
+		arguments: string;
+	};
+}
+
+export interface ToolResult {
+	tool_call_id: string;
+	content: string;
+}
+
+export interface ChatResponse {
+	success: boolean;
+	message?: string;
+	error?: string;
+	toolCalls?: ToolCall[];
+	stopReason?: string;
+}
+
+export interface StreamChunk {
+	type: 'text' | 'tool_use' | 'error';
+	content?: string;
+	toolCall?: ToolCall;
+	error?: string;
+}
+
+export type StreamCallback = (chunk: StreamChunk) => void;
 
 export abstract class LLMDriverBase {
 	protected config: LLMDriverConfig;
+	protected abortController: AbortController | null = null;
 
 	constructor(config: LLMDriverConfig) {
 		this.config = config;
 	}
 
 	abstract testConnection(): Promise<LLMTestResult>;
+	abstract sendMessage(messages: ChatMessage[], tools?: any[]): Promise<ChatResponse>;
+	abstract sendMessageStream(messages: ChatMessage[], tools?: any[], onChunk?: StreamCallback): Promise<ChatResponse>;
+
+	setAbortController(controller: AbortController | null): void {
+		this.abortController = controller;
+	}
 
 	protected validateConfig(): LLMTestResult | null {
 		if (!this.config.apiUrl) {

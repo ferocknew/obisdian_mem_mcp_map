@@ -1,6 +1,11 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { readFileSync, existsSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const banner =
 `/*
@@ -10,6 +15,44 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === "production");
+
+// CSS loader plugin
+const cssPlugin = {
+	name: 'css',
+	setup(build) {
+		build.onLoad({ filter: /\.css$/ }, async (args) => {
+			const css = readFileSync(args.path, 'utf8');
+			return {
+				contents: `export default ${JSON.stringify(css)}`,
+				loader: 'js',
+			};
+		});
+	},
+};
+
+// Path alias plugin
+const aliasPlugin = {
+	name: 'alias',
+	setup(build) {
+		build.onResolve({ filter: /^@\// }, args => {
+			const relativePath = args.path.slice(2); // 移除 '@/'
+			const resolvedPath = path.resolve(__dirname, 'src', relativePath);
+
+			// 尝试添加不同的扩展名
+			const extensions = ['.ts', '.tsx', '.js', '.jsx', '.json'];
+
+			for (const ext of extensions) {
+				const fullPath = resolvedPath + ext;
+				if (existsSync(fullPath)) {
+					return { path: fullPath };
+				}
+			}
+
+			// 如果文件不存在，返回原路径（让 esbuild 自己处理）
+			return { path: resolvedPath };
+		});
+	},
+};
 
 const context = await esbuild.context({
 	banner: {
@@ -39,6 +82,7 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
+	plugins: [cssPlugin, aliasPlugin],
 });
 
 if (prod) {
