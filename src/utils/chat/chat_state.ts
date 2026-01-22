@@ -8,11 +8,11 @@ import { ChatState } from '@/utils/chat/chat_types';
 export class ChatStateManager {
 	private state: ChatState;
 
-	constructor() {
+	constructor(initialWebSearchEnabled: boolean = false) {
 		this.state = {
 			messages: [],
 			title: '新的对话',
-			webSearchEnabled: false,
+			webSearchEnabled: initialWebSearchEnabled,
 			isGenerating: false,
 			abortController: null
 		};
@@ -118,9 +118,10 @@ export class ChatStateManager {
 	/**
 	 * 重置状态（新建聊天时使用）
 	 */
-	reset(): void {
+	reset(initialWebSearchEnabled: boolean = false): void {
 		this.state.messages = [];
 		this.state.title = '新的对话';
+		this.state.webSearchEnabled = initialWebSearchEnabled;
 		this.state.isGenerating = false;
 		this.state.abortController = null;
 		console.log('[Chat State] 状态已重置');

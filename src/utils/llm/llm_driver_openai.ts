@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import { LLMDriverBase, LLMDriverConfig, LLMTestResult, ChatMessage, ChatResponse } from './llm_driver_base';
+import { LLMDriverBase, LLMDriverConfig, LLMTestResult, ChatMessage, ChatResponse, ModelsListResult } from './llm_driver_base';
 
 export class OpenAILLMDriver extends LLMDriverBase {
 	constructor(config: LLMDriverConfig) {
@@ -190,6 +190,55 @@ export class OpenAILLMDriver extends LLMDriverBase {
 			return {
 				success: false,
 				error: error.message || '流式发送失败'
+			};
+		}
+	}
+
+	async fetchModelsList(): Promise<ModelsListResult> {
+		console.log('[OpenAI Driver] 开始获取模型列表...');
+
+		if (!this.config.apiUrl || !this.config.apiKey) {
+			return {
+				success: false,
+				error: '请先配置 API URL 和 API Key'
+			};
+		}
+
+		try {
+			const response = await requestUrl({
+				url: `${this.config.apiUrl}/models`,
+				method: 'GET',
+				headers: {
+					'Authorization': `Bearer ${this.config.apiKey}`
+				}
+			});
+
+			if (response.status === 200) {
+				const data = response.json;
+				console.log('[OpenAI Driver] ✓ 获取模型列表成功，模型数量:', data.data?.length || 0);
+
+				const models = (data.data || []).map((model: any) => ({
+					id: model.id,
+					name: model.id,
+					description: model.owned_by ? `由 ${model.owned_by} 提供` : undefined
+				}));
+
+				return {
+					success: true,
+					models: models
+				};
+			} else {
+				console.error('[OpenAI Driver] ✗ 获取模型列表失败:', response.status);
+				return {
+					success: false,
+					error: `API 返回错误状态: ${response.status}`
+				};
+			}
+		} catch (error) {
+			console.error('[OpenAI Driver] ✗ 获取模型列表失败:', error);
+			return {
+				success: false,
+				error: error.message || '获取模型列表失败'
 			};
 		}
 	}

@@ -4,6 +4,18 @@ export interface LLMTestResult {
 	error?: string;
 }
 
+export interface ModelInfo {
+	id: string;
+	name?: string;
+	description?: string;
+}
+
+export interface ModelsListResult {
+	success: boolean;
+	models?: ModelInfo[];
+	error?: string;
+}
+
 export interface LLMDriverConfig {
 	apiUrl: string;
 	apiKey: string;
@@ -58,6 +70,7 @@ export abstract class LLMDriverBase {
 	abstract testConnection(): Promise<LLMTestResult>;
 	abstract sendMessage(messages: ChatMessage[], tools?: any[]): Promise<ChatResponse>;
 	abstract sendMessageStream(messages: ChatMessage[], tools?: any[], onChunk?: StreamCallback): Promise<ChatResponse>;
+	abstract fetchModelsList(): Promise<ModelsListResult>;
 
 	setAbortController(controller: AbortController | null): void {
 		this.abortController = controller;

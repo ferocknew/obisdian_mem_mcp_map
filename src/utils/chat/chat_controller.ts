@@ -15,12 +15,14 @@ export class ChatController {
 	private ui: ChatUIManager;
 	private dependencies: ChatDependencies;
 	private toolHandler: ChatToolHandler;
+	private initialWebSearchEnabled: boolean;
 
-	constructor(state: ChatStateManager, ui: ChatUIManager, dependencies: ChatDependencies) {
+	constructor(state: ChatStateManager, ui: ChatUIManager, dependencies: ChatDependencies, initialWebSearchEnabled: boolean = false) {
 		this.state = state;
 		this.ui = ui;
 		this.dependencies = dependencies;
 		this.toolHandler = new ChatToolHandler(dependencies.toolExecutor, ui);
+		this.initialWebSearchEnabled = initialWebSearchEnabled;
 
 		this.setupEventListeners();
 	}
@@ -166,6 +168,15 @@ export class ChatController {
 				await this.handleToolCalls(response.toolCalls, tools);
 
 			} else if (response.success && response.message) {
+				// 如果没有触发过流式更新(buffer为空),说明是非流式响应,需要手动更新内容
+				if (streamingMsg.buffer.text === '') {
+					await this.ui.updateStreamingMessage(
+						streamingMsg.contentDiv,
+						streamingMsg.buffer,
+						response.message
+					);
+				}
+
 				// 流式回复已完成，添加到消息历史
 				this.state.addMessage({ role: 'assistant', content: response.message });
 
@@ -279,13 +290,13 @@ export class ChatController {
 	private handleNewChat(): void {
 		console.log('[Chat Controller] 新建聊天');
 
-		// 重置状态
-		this.state.reset();
+		// 重置状态，使用初始搜索开关状态
+		this.state.reset(this.initialWebSearchEnabled);
 
 		// 清空界面
 		this.ui.clearMessages();
 		this.ui.updateTitle(this.state.getTitle());
-		this.ui.updateSearchButtonState(false);
+		this.ui.updateSearchButtonState(this.initialWebSearchEnabled);
 
 		new Notice('已创建新对话');
 	}

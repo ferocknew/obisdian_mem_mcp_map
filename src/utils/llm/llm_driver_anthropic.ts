@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import { LLMDriverBase, LLMDriverConfig, LLMTestResult, ChatMessage, ChatResponse } from './llm_driver_base';
+import { LLMDriverBase, LLMDriverConfig, LLMTestResult, ChatMessage, ChatResponse, ModelsListResult } from './llm_driver_base';
 
 export class AnthropicLLMDriver extends LLMDriverBase {
 	constructor(config: LLMDriverConfig) {
@@ -296,5 +296,35 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 				error: error.message || '流式发送失败'
 			};
 		}
+	}
+
+	async fetchModelsList(): Promise<ModelsListResult> {
+		console.log('[Anthropic Driver] 开始获取模型列表...');
+
+		if (!this.config.apiUrl || !this.config.apiKey) {
+			return {
+				success: false,
+				error: '请先配置 API URL 和 API Key'
+			};
+		}
+
+		// Anthropic API 没有公开的模型列表接口，返回常用模型列表
+		console.log('[Anthropic Driver] ✓ 返回预定义的 Anthropic 模型列表');
+
+		const models = [
+			{ id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', description: '最强大的模型，适合复杂任务' },
+			{ id: 'claude-sonnet-4.5-20250514', name: 'Claude Sonnet 4.5', description: '平衡性能和速度' },
+			{ id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: '高性能模型' },
+			{ id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: '上一代高性能模型' },
+			{ id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', description: '快速响应模型' },
+			{ id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', description: 'Claude 3 系列最强模型' },
+			{ id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', description: 'Claude 3 系列平衡模型' },
+			{ id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', description: 'Claude 3 系列快速模型' }
+		];
+
+		return {
+			success: true,
+			models: models
+		};
 	}
 }

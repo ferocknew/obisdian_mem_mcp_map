@@ -1,4 +1,4 @@
-import { LLMDriverBase, LLMTestResult, ChatMessage, ChatResponse, ToolCall, StreamCallback } from './utils/llm/llm_driver_base';
+import { LLMDriverBase, LLMTestResult, ChatMessage, ChatResponse, ToolCall, StreamCallback, ModelsListResult } from './utils/llm/llm_driver_base';
 import { AnthropicLLMDriver } from './utils/llm/llm_driver_anthropic';
 import { OpenAILLMDriver } from './utils/llm/llm_driver_openai';
 
@@ -70,5 +70,13 @@ export class LLMClient {
 			this.abortController.abort();
 			console.log('[LLM Client] ✓ 请求已中止');
 		}
+	}
+
+	/**
+	 * 获取模型列表
+	 */
+	async fetchModelsList(): Promise<ModelsListResult> {
+		console.log('[LLM Client] 获取模型列表...');
+		return await this.driver.fetchModelsList();
 	}
 }

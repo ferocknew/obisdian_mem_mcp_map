@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import MemoryGraphPlugin from '@/main';
 import { APIClient } from '@/api_client';
-import { ChatView } from '@/utils/chat/chat_view';
+import { ChatView } from '@/utils/pages/chat_view';
 import { SearchPageView } from '@/utils/pages/search';
 import { LLMClient } from '@/llm_client';
 import { WhoogleClient } from '@/utils/tools/whoogle';
@@ -92,8 +92,9 @@ export class MemorySearchView extends ItemView {
 		this.searchPageView = new SearchPageView(this.app, this.plugin, this.apiClient, searchContainer);
 		this.searchPageView.createInterface();
 
-		// 创建AI聊天界面，传入App实例和LLM客户端
-		this.chatView = new ChatView(container, this.app, this.llmClient || undefined);
+		// 创建AI聊天界面，传入App实例、LLM客户端和默认搜索开关状态
+		const initialWebSearchEnabled = this.plugin.settings.searchDefaultEnabled || false;
+		this.chatView = new ChatView(container, this.app, this.llmClient || undefined, initialWebSearchEnabled);
 		this.chatView.createInterface();
 
 		// 设置 Whoogle 客户端到聊天视图

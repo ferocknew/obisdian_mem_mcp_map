@@ -20,6 +20,7 @@ export class ChatView {
 	private controller: ChatController;
 	private markdownComponent: Component;
 	private dependencies: ChatDependencies;
+	private initialWebSearchEnabled: boolean;
 
 	// 公开的 UI 元素（保持向后兼容）
 	readonly chatContainer: HTMLElement;
@@ -36,7 +37,9 @@ export class ChatView {
 	currentChatMessages: ChatMessage[] = [];
 	currentChatTitle: string = '新的对话';
 
-	constructor(parentContainer: HTMLElement, app: App, llmClient?: LLMClient) {
+	constructor(parentContainer: HTMLElement, app: App, llmClient?: LLMClient, initialWebSearchEnabled: boolean = false) {
+		// 保存初始搜索状态
+		this.initialWebSearchEnabled = initialWebSearchEnabled;
 		// 创建 Markdown 组件
 		this.markdownComponent = new Component();
 		this.markdownComponent.load();
@@ -53,14 +56,14 @@ export class ChatView {
 			whoogleClient: null
 		};
 
-		// 创建状态管理器
-		this.state = new ChatStateManager();
+		// 创建状态管理器，传入初始搜索开关状态
+		this.state = new ChatStateManager(initialWebSearchEnabled);
 
 		// 创建 UI 管理器
 		this.ui = new ChatUIManager(parentContainer, this.dependencies);
 
-		// 创建控制器
-		this.controller = new ChatController(this.state, this.ui, this.dependencies);
+		// 创建控制器，传递初始搜索状态
+		this.controller = new ChatController(this.state, this.ui, this.dependencies, this.initialWebSearchEnabled);
 
 		// 获取 UI 元素（保持向后兼容）
 		const uiElements = this.ui.getUI();

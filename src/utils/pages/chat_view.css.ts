@@ -152,12 +152,29 @@ export const chatViewStyles = `
 		line-height: 1.5;
 		word-wrap: break-word;
 		white-space: pre-wrap;
+		user-select: text;
+		-webkit-user-select: text;
+		-moz-user-select: text;
+		-ms-user-select: text;
+		cursor: text;
 	}
 
 	.ai-chat-message.user .ai-chat-message-content {
-		background: var(--interactive-accent);
-		color: var(--text-on-accent);
+		background: var(--background-secondary);
+		color: var(--text-normal);
+		border: 2px solid var(--interactive-accent);
 		border-bottom-right-radius: 2px;
+	}
+
+	/* 用户消息选中文字样式 */
+	.ai-chat-message.user .ai-chat-message-content ::selection {
+		background: var(--text-selection);
+		color: var(--text-normal);
+	}
+
+	.ai-chat-message.user .ai-chat-message-content ::-moz-selection {
+		background: var(--text-selection);
+		color: var(--text-normal);
 	}
 
 	.ai-chat-message.assistant .ai-chat-message-content {
@@ -165,6 +182,17 @@ export const chatViewStyles = `
 		color: var(--text-normal);
 		border: 1px solid var(--background-modifier-border);
 		border-bottom-left-radius: 2px;
+	}
+
+	/* AI消息选中文字样式 */
+	.ai-chat-message.assistant .ai-chat-message-content ::selection {
+		background: var(--text-selection);
+		color: var(--text-normal);
+	}
+
+	.ai-chat-message.assistant .ai-chat-message-content ::-moz-selection {
+		background: var(--text-selection);
+		color: var(--text-normal);
 	}
 
 	.ai-chat-message-content.thinking {
