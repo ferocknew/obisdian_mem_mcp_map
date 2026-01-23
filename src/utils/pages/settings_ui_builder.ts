@@ -40,6 +40,7 @@ export class SettingsUIBuilder {
 	build(): void {
 		this.buildHeader();
 		this.buildSyncFolderSetting();
+		this.buildAutoSyncSection();
 		this.buildSeparator();
 
 		this.buildMemoryServerSection();
@@ -96,6 +97,52 @@ export class SettingsUIBuilder {
 					await this.plugin.saveSettings();
 				});
 			});
+	}
+
+	/**
+	 * 自动同步设置
+	 */
+	private buildAutoSyncSection(): void {
+		this.containerEl.createEl('h3', { text: '自动同步设置' });
+
+		// 自动同步观察记录开关
+		new Setting(this.containerEl)
+			.setName('自动更新观察记录')
+			.setDesc('启用后，修改观察文件将自动同步到服务器')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.autoSyncObservations || false);
+				toggle.onChange(async (value) => {
+					this.plugin.settings.autoSyncObservations = value;
+
+					// 更新 FileWatcher 状态
+					if (this.plugin.fileWatcher) {
+						this.plugin.fileWatcher.setEnabled(value);
+					}
+
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// 手动触发按钮
+		new Setting(this.containerEl)
+			.setName('手动触发同步')
+			.setDesc('立即检查所有观察文件并同步到服务器')
+			.addButton(button => {
+				button.setButtonText('立即同步');
+				button.setClass('mod-cta');
+				button.onClick(() => {
+					this.handleManualSync();
+				});
+			});
+	}
+
+	/**
+	 * 手动触发同步
+	 */
+	private handleManualSync(): void {
+		// TODO: 实现手动同步逻辑
+		// 这里可以遍历所有观察文件，强制同步
+		console.log('[Settings] 手动触发同步');
 	}
 
 	/**

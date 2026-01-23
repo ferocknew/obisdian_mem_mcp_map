@@ -16,6 +16,7 @@ export interface MemoryGraphSettings {
 	searchAuthEnabled: boolean;
 	searchAuthKey: string;
 	searchDefaultEnabled: boolean;
+	autoSyncObservations: boolean; // 自动同步观察记录
 }
 
 export const DEFAULT_SETTINGS: MemoryGraphSettings = {
@@ -32,7 +33,8 @@ export const DEFAULT_SETTINGS: MemoryGraphSettings = {
 	searchWhoogleUrl: '',
 	searchAuthEnabled: false,
 	searchAuthKey: '',
-	searchDefaultEnabled: false
+	searchDefaultEnabled: false,
+	autoSyncObservations: false // 默认关闭自动同步
 }
 
 // 导出设置页面类

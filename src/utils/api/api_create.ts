@@ -32,6 +32,14 @@ export interface RelationCreateParams {
 }
 
 /**
+ * 观察记录更新参数（通过 ID）
+ */
+export interface ObservationUpdateByIdParams {
+	observation_id: string;
+	content: string;
+}
+
+/**
  * API 创建客户端
  */
 export class APICreateClient {
@@ -57,6 +65,15 @@ export class APICreateClient {
 	 */
 	async addObservations(observations: ObservationAddParams[]): Promise<any> {
 		return this.systemClient.request('/tools/entities/add_observations', 'POST', { observations });
+	}
+
+	/**
+	 * 通过 ID 更新观察记录
+	 *
+	 * @param updates 更新列表
+	 */
+	async updateObservationsById(updates: ObservationUpdateByIdParams[]): Promise<any> {
+		return this.systemClient.request('/tools/entities/update_observations', 'POST', { updates });
 	}
 
 	/**

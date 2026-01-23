@@ -1,9 +1,11 @@
 import { Plugin, Notice, WorkspaceLeaf, Menu, TFile, TFolder, Editor, MarkdownView } from 'obsidian';
 import { DEFAULT_SETTINGS, MemoryGraphSettings, MemoryGraphSettingTab } from './settings';
 import { MemorySearchView, VIEW_TYPE_MEMORY_SEARCH } from './search_view';
+import { FileWatcher } from '@/hooks/file_watcher';
 
 export default class MemoryGraphPlugin extends Plugin {
 	settings: MemoryGraphSettings;
+	fileWatcher: any; // FileWatcher 实例引用
 
 	async onload() {
 		console.log('Loading Memory Graph Plugin');
@@ -45,6 +47,19 @@ export default class MemoryGraphPlugin extends Plugin {
 				new Notice('请使用命令面板中的 "Reload plugins without reloading app"');
 			}
 		});
+
+		// 添加命令：手动同步观察记录
+		this.addCommand({
+			id: 'sync-observations',
+			name: '🔄 手动同步观察记录',
+			callback: async () => {
+				await this.syncAllObservations();
+			}
+		});
+
+		// 🆕 注册文件监听器
+		this.fileWatcher = new FileWatcher(this);
+		this.fileWatcher.register();
 
 		// 注册编辑器右键菜单
 		this.registerEvent(
@@ -410,6 +425,47 @@ export default class MemoryGraphPlugin extends Plugin {
 		} catch (error) {
 			console.error('[Context Menu] 读取文件夹失败:', error);
 			new Notice('读取文件夹失败');
+		}
+	}
+
+	/**
+	 * 手动同步所有观察记录
+	 */
+	async syncAllObservations(): Promise<void> {
+		console.log('[Manual Sync] 开始手动同步所有观察记录');
+
+		const syncFolder = this.settings.syncTargetFolder;
+		if (!syncFolder) {
+			new Notice('❌ 请先设置同步目标目录');
+			return;
+		}
+
+		try {
+			// 获取所有观察文件
+			const allFiles = this.app.vault.getMarkdownFiles();
+			const observationFiles = allFiles.filter(f =>
+				f.path.startsWith(syncFolder) && f.path.includes('/观察/')
+			);
+
+			if (observationFiles.length === 0) {
+				new Notice('未找到观察文件');
+				return;
+			}
+
+			new Notice(`找到 ${observationFiles.length} 个观察文件，开始同步...`);
+			console.log(`[Manual Sync] 找到 ${observationFiles.length} 个观察文件`);
+
+			// TODO: 实现同步逻辑
+			// 1. 遍历所有观察文件
+			// 2. 读取并解析每个文件
+			// 3. 检查内容是否变化
+			// 4. 调用 API 更新
+
+			new Notice('✅ 同步完成（功能开发中）');
+
+		} catch (error) {
+			console.error('[Manual Sync] 同步失败:', error);
+			new Notice(`❌ 同步失败: ${error.message}`);
 		}
 	}
 
