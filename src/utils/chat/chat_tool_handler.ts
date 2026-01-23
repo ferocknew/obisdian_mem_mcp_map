@@ -66,7 +66,7 @@ export class ChatToolHandler {
 			// 如果有搜索结果，添加到状态文本中
 			if (result.result && result.result.results && result.result.results.length > 0) {
 				const results = result.result.results.slice(0, 6);
-				const validResults = results.filter((r: any) => r.title && r.url);
+				const validResults = results.filter((r: any) => r.title && r.title.trim() !== '' && r.url && r.url.trim() !== '');
 
 				if (validResults.length > 0) {
 					const resultsList = validResults.map((r: any, i: number) =>

@@ -144,7 +144,7 @@ export class WhoogleClient {
 				for (const result of resultList) {
 					const formattedResult: WhoogleSearchResult = {
 						title: result.title || '',
-						url: result.url || result.link || '',
+						url: result.href || result.url || result.link || '',
 						content: result.content || result.snippet || result.description || '',
 						engine: 'whoogle'
 					};

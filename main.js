@@ -3658,7 +3658,7 @@ var _ChatToolHandler = class _ChatToolHandler {
 \u2713 ${result.displayText}`;
       if (result.result && result.result.results && result.result.results.length > 0) {
         const results = result.result.results.slice(0, 6);
-        const validResults = results.filter((r) => r.title && r.url);
+        const validResults = results.filter((r) => r.title && r.title.trim() !== "" && r.url && r.url.trim() !== "");
         if (validResults.length > 0) {
           const resultsList = validResults.map(
             (r, i) => `${i + 1}. [${r.title}](${r.url})`
@@ -5839,7 +5839,7 @@ var _WhoogleClient = class _WhoogleClient {
         for (const result of resultList) {
           const formattedResult = {
             title: result.title || "",
-            url: result.url || result.link || "",
+            url: result.href || result.url || result.link || "",
             content: result.content || result.snippet || result.description || "",
             engine: "whoogle"
           };
