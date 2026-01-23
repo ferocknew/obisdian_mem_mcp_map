@@ -1,4 +1,4 @@
-import { Notice } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 import { ChatMessage, ToolCall } from '@/utils/llm/llm_driver_base';
 import { ChatStateManager } from '@/utils/chat/chat_state';
 import { ChatUIManager } from '@/utils/chat/chat_ui';
@@ -17,6 +17,7 @@ export class ChatController {
 	private dependencies: ChatDependencies;
 	private toolHandler: ChatToolHandler;
 	private initialWebSearchEnabled: boolean;
+	private isComposing: boolean = false; // 输入法输入状态标志
 
 	constructor(state: ChatStateManager, ui: ChatUIManager, dependencies: ChatDependencies, initialWebSearchEnabled: boolean = false) {
 		this.state = state;
@@ -42,16 +43,24 @@ export class ChatController {
 
 		// 设置全局搜索回调
 		this.dependencies.toolExecutor.setGlobalSearchCallback(async (query: string, limit: number) => {
-			const results = await this.dependencies.app.vault.cachedRead({});
 			// 使用 Obsidian 的全局搜索 API
-			const searchResults = this.dependencies.app.vault.getMarkdownFiles()
-				.filter(file => file.path.toLowerCase().includes(query.toLowerCase()))
-				.slice(0, limit)
-				.map(file => ({
-					path: file.path,
-					name: file.name,
-					content: ''  // 实际使用时可以读取内容
-				}));
+			const allFiles = this.dependencies.app.vault.getMarkdownFiles();
+
+			// 搜索文件名和文件路径
+			const matchedFiles = allFiles.filter(file => {
+				const lowerPath = file.path.toLowerCase();
+				const lowerQuery = query.toLowerCase();
+				return lowerPath.includes(lowerQuery);
+			});
+
+			const limitedResults = matchedFiles.slice(0, limit);
+
+			const searchResults = limitedResults.map(file => ({
+				title: file.basename,  // 文件名（不含扩展名）
+				url: `obsidian://open?vault=${encodeURIComponent(this.dependencies.app.vault.getName())}&file=${encodeURIComponent(file.path)}`,
+				path: file.path,
+				name: file.name
+			}));
 
 			return { results: searchResults };
 		});
@@ -59,7 +68,7 @@ export class ChatController {
 		// 设置打开文件回调
 		this.dependencies.toolExecutor.setOpenFileCallback(async (path: string) => {
 			const file = this.dependencies.app.vault.getAbstractFileByPath(path);
-			if (file) {
+			if (file instanceof TFile) {
 				await this.dependencies.app.workspace.getLeaf(false).openFile(file);
 			} else {
 				throw new Error(`文件不存在: ${path}`);
@@ -78,9 +87,18 @@ export class ChatController {
 			this.handleSendOrStop();
 		});
 
+		// 输入法 composition 事件监听
+		this.ui.getUI().input.addEventListener('compositionstart', () => {
+			this.isComposing = true;
+		});
+
+		this.ui.getUI().input.addEventListener('compositionend', () => {
+			this.isComposing = false;
+		});
+
 		// 输入框回车事件
 		this.ui.getUI().input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') {
+			if (e.key === 'Enter' && !this.isComposing) {
 				e.preventDefault();
 				this.handleSendOrStop();
 			}

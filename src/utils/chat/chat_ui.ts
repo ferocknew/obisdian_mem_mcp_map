@@ -17,6 +17,19 @@ export class ChatUIManager {
 	}
 
 	/**
+	 * 清理文本中的多余空行
+	 * 将多个连续换行符替换为单个换行符
+	 */
+	private cleanupText(content: string): string {
+		if (!content) return content;
+		// 移除首尾空白
+		let cleaned = content.trim();
+		// 将2个或更多连续换行符替换为1个
+		cleaned = cleaned.replace(/\n{2,}/g, '\n');
+		return cleaned;
+	}
+
+	/**
 	 * 获取 UI 元素
 	 */
 	getUI(): UIElements {
@@ -141,6 +154,9 @@ export class ChatUIManager {
 	 * 添加消息到界面（纯文本）
 	 */
 	addMessage(role: 'user' | 'assistant', content: string): HTMLElement {
+		// 清理多余空行
+		const cleanedContent = this.cleanupText(content);
+
 		const messageDiv = this.ui.messagesContainer.createDiv({
 			cls: `ai-chat-message ${role}`
 		});
@@ -155,7 +171,7 @@ export class ChatUIManager {
 		const contentDiv = messageDiv.createEl('div', {
 			cls: 'ai-chat-message-content'
 		});
-		contentDiv.textContent = content;
+		contentDiv.textContent = cleanedContent;
 
 		// 滚动到底部
 		this.scrollToBottom();
@@ -167,6 +183,9 @@ export class ChatUIManager {
 	 * 添加消息到界面（Markdown 渲染）
 	 */
 	async addMarkdownMessage(role: 'user' | 'assistant', content: string): Promise<HTMLElement> {
+		// 清理多余空行
+		const cleanedContent = this.cleanupText(content);
+
 		const messageDiv = this.ui.messagesContainer.createDiv({
 			cls: `ai-chat-message ${role}`
 		});
@@ -185,7 +204,7 @@ export class ChatUIManager {
 		// 使用 Obsidian 的 MarkdownRenderer 渲染 Markdown
 		await MarkdownRenderer.render(
 			this.dependencies.app,
-			content,
+			cleanedContent,
 			contentDiv,
 			'', // sourcePath
 			this.dependencies.markdownComponent
@@ -240,11 +259,14 @@ export class ChatUIManager {
 	async updateStreamingMessage(contentDiv: HTMLElement, buffer: { text: string }, newText: string): Promise<void> {
 		buffer.text += newText;
 
+		// 清理多余空行后再渲染
+		const cleanedText = this.cleanupText(buffer.text);
+
 		// 清空并重新渲染
 		contentDiv.empty();
 		await MarkdownRenderer.render(
 			this.dependencies.app,
-			buffer.text,
+			cleanedText,
 			contentDiv,
 			'',
 			this.dependencies.markdownComponent

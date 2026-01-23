@@ -283,6 +283,8 @@ export class SettingsUIBuilder {
 				text.onChange(async (value) => {
 					this.plugin.settings.llmSystemRules = value;
 					await this.plugin.saveSettings();
+					// 重新初始化LLM客户端以应用新的system规则
+					this.reinitLLMClient();
 				});
 			});
 	}
@@ -563,6 +565,25 @@ export class SettingsUIBuilder {
 					descContent.textContent = endpoint.description;
 				}
 			});
+		}
+	}
+
+	/**
+	 * 重新初始化LLM客户端（当system规则等配置更新时）
+	 */
+	private reinitLLMClient(): void {
+		try {
+			// 获取当前打开的MemorySearchView
+			const leaves = this.plugin.app.workspace.getLeavesOfType('memory-search-view');
+			if (leaves.length > 0) {
+				const searchView = leaves[0].view as any;
+				if (searchView && typeof searchView.reinitLLMClient === 'function') {
+					searchView.reinitLLMClient();
+					console.log('[Settings UI] ✓ LLM客户端已重新初始化');
+				}
+			}
+		} catch (error) {
+			console.error('[Settings UI] 重新初始化LLM客户端失败:', error);
 		}
 	}
 }

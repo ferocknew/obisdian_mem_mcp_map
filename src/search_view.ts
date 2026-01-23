@@ -255,6 +255,14 @@ export class MemorySearchView extends ItemView {
 	}
 
 	/**
+	 * 公开方法：重新初始化LLM客户端（当配置更新时调用）
+	 */
+	reinitLLMClient(): void {
+		console.log('[Search View] 重新初始化 LLM 客户端');
+		this.initializeLLMClient();
+	}
+
+	/**
 	 * 将文件内容注入到聊天上下文
 	 * 注意：现在只设置文件引用，不立即注入完整内容
 	 * AI 可以通过 read_doc 工具按需读取

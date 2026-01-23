@@ -66,11 +66,15 @@ export class ChatToolHandler {
 			// 如果有搜索结果，添加到状态文本中
 			if (result.result && result.result.results && result.result.results.length > 0) {
 				const results = result.result.results.slice(0, 6);
-				const resultsList = results.map((r: any, i: number) =>
-					`${i + 1}. [${r.title}](${r.url})`
-				).join('\n');
+				const validResults = results.filter((r: any) => r.title && r.url);
 
-				statusText += `\n**搜索结果：**\n${resultsList}`;
+				if (validResults.length > 0) {
+					const resultsList = validResults.map((r: any, i: number) =>
+						`${i + 1}. [${r.title}](${r.url})`
+					).join('\n');
+
+					statusText += `\n\n**搜索结果：**\n${resultsList}`;
+				}
 			}
 
 			await this.ui.addMarkdownMessage('assistant', statusText);

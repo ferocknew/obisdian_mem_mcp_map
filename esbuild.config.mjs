@@ -80,7 +80,12 @@ const context = await esbuild.context({
 	target: "es2018",
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
-	treeShaking: true,
+	treeShaking: false,  // Disable tree-shaking to prevent field removal
+	minify: false,  // Disable minification
+	minifyWhitespace: false,
+	minifyIdentifiers: false,
+	minifySyntax: false,
+	keepNames: true,  // Keep variable names
 	outfile: "main.js",
 	plugins: [cssPlugin, aliasPlugin],
 });

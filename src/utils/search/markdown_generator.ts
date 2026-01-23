@@ -20,9 +20,14 @@ export class MarkdownGenerator {
 		const keywords = this.extractKeywords(observations);
 		const relationsFrontmatter = this.buildRelationsFrontmatter(relations);
 
+		// 使用语义化的字段名，避免 esbuild 删除
 		let content = `---
 title: ${entityName}
 id: ${entityId || 'unknown'}
+category: MAIN_ENTITY
+type: 实体
+entity_class: ${entityType}
+entity_label: ${entityName}
 created_at: ${dateStr}
 updated_at: ${dateStr}
 tags:
@@ -65,17 +70,18 @@ ${relationsFrontmatter}---
 	generateObservationMarkdown(observation: any, entityName: string): string {
 		const obsText = typeof observation === 'string' ? observation : (observation.content || '');
 		const obsId = typeof observation === 'object' && observation.id ? observation.id : '';
+		const now = new Date();
+		const dateStr = now.toISOString().split('T')[0];
 
-		let content = '';
-		if (obsId) {
-			content = `---
+		let content = `---
 id: ${obsId}
+category: OBSERVATION
+type: 观察
+parent_entity: ${entityName}
+created_at: ${dateStr}
 ---
 
-`;
-		}
-
-		content += `${obsText}
+${obsText}
 
 ## 关联关系
 - 属于: [[${entityName}]]
