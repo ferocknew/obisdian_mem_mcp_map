@@ -318,6 +318,45 @@ created_at: ${dateStr}
 	}
 
 	/**
+	 * 删除实体
+	 */
+	async deleteEntity(entity: any, onRefresh?: () => void): Promise<void> {
+		const entityName = entity.name || entity.entity_name || '未命名';
+
+		try {
+			// 调用 API 删除实体
+			const result = await this.apiClient.delete.deleteEntities([entityName]);
+
+			if (result.deleted_count > 0) {
+				new Notice(`✓ 成功删除实体: ${entityName}`);
+
+				// 如果存在本地 Markdown 文件，也删除
+				const syncFolder = this.plugin.settings.syncTargetFolder;
+				if (syncFolder) {
+					const entityFolderPath = `${syncFolder}/${entityName}`;
+					const entityFolder = this.app.vault.getAbstractFileByPath(entityFolderPath);
+
+					if (entityFolder) {
+						await this.app.vault.delete(entityFolder, true);
+						new Notice(`✓ 已删除本地文件: ${entityFolderPath}`);
+					}
+				}
+
+				// 从搜索结果中移除已删除的实体
+				if (onRefresh) {
+					onRefresh();
+				}
+			} else {
+				new Notice(`删除失败: ${result.failed_entities?.[0]?.error || '未知错误'}`);
+			}
+
+		} catch (error) {
+			console.error('[Delete Entity] 删除失败:', error);
+			new Notice(`删除失败: ${error.message}`);
+		}
+	}
+
+	/**
 	 * 提取关键词
 	 */
 	private extractKeywords(observations: any[]): string[] {

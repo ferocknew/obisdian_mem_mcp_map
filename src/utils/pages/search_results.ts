@@ -97,7 +97,12 @@ export class SearchResultsDisplay {
 	/**
 	 * 显示实体菜单
 	 */
-	async showEntityMenu(entity: any, event: MouseEvent, fileExists: boolean): Promise<void> {
+	async showEntityMenu(
+		entity: any,
+		event: MouseEvent,
+		fileExists: boolean,
+		onRefresh?: () => void
+	): Promise<void> {
 		const entityName = entity.name || entity.entity_name || '未命名';
 		const syncFolder = this.plugin.settings.syncTargetFolder;
 
@@ -138,6 +143,100 @@ export class SearchResultsDisplay {
 			});
 		}
 
+		// 添加删除选项
+		menu.addItem((item) => {
+			item
+				.setTitle('删除')
+				.setIcon('trash')
+				.onClick(async () => {
+					// 确认删除
+					const confirmed = await this.confirmDelete(entityName);
+					if (confirmed) {
+						await this.entityManager.deleteEntity(entity, onRefresh);
+					}
+				});
+		});
+
 		menu.showAtMouseEvent(event);
+	}
+
+	/**
+	 * 确认删除对话框
+	 */
+	private async confirmDelete(entityName: string): Promise<boolean> {
+		const modal = document.createElement('div');
+		modal.style.cssText = `
+			position: fixed;
+			top: 0; left: 0; right: 0; bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000;
+		`;
+
+		const dialog = document.createElement('div');
+		dialog.style.cssText = `
+			background: var(--background-primary);
+			padding: 20px;
+			border-radius: 8px;
+			min-width: 300px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		`;
+
+		dialog.innerHTML = `
+			<h3 style="margin-top: 0; margin-bottom: 15px;">确认删除</h3>
+			<p style="margin-bottom: 20px;">确定要删除实体 <strong>${entityName}</strong> 吗？</p>
+			<p style="margin-bottom: 20px; color: var(--text-muted); font-size: 0.9em;">
+				此操作将删除实体及其所有关联关系，本地 Markdown 文件也会被删除。
+			</p>
+			<div style="display: flex; gap: 10px; justify-content: flex-end;">
+				<button id="cancel-btn" style="
+					padding: 8px 16px;
+					border: 1px solid var(--background-modifier-border);
+					background: var(--background-secondary);
+					border-radius: 4px;
+					cursor: pointer;
+				">取消</button>
+				<button id="confirm-btn" style="
+					padding: 8px 16px;
+					border: none;
+					background: var(--color-red);
+					color: white;
+					border-radius: 4px;
+					cursor: pointer;
+				">删除</button>
+			</div>
+		`;
+
+		modal.appendChild(dialog);
+		document.body.appendChild(modal);
+
+		return new Promise<boolean>((resolve) => {
+			const cancelBtn = dialog.querySelector('#cancel-btn') as HTMLButtonElement;
+			const confirmBtn = dialog.querySelector('#confirm-btn') as HTMLButtonElement;
+
+			const cleanup = () => {
+				document.body.removeChild(modal);
+			};
+
+			cancelBtn.onclick = () => {
+				cleanup();
+				resolve(false);
+			};
+
+			confirmBtn.onclick = () => {
+				cleanup();
+				resolve(true);
+			};
+
+			// 点击遮罩层关闭
+			modal.onclick = (e) => {
+				if (e.target === modal) {
+					cleanup();
+					resolve(false);
+				}
+			};
+		});
 	}
 }
