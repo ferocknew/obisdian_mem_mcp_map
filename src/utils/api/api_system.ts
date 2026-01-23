@@ -136,6 +136,9 @@ export class APISystemClient {
 
 		const url = `${this.baseUrl}${path}`;
 		console.log(`[API System] ${method} ${url}`);
+		if (body) {
+			console.log(`[API System] >>> 请求体:`, JSON.stringify(body, null, 2));
+		}
 
 		try {
 			const response = await requestUrl({
@@ -146,6 +149,7 @@ export class APISystemClient {
 			});
 
 			if (response.status >= 400) {
+				console.error(`[API System] <<< 响应错误 (${response.status}):`, response.text);
 				throw new Error(`HTTP ${response.status}: ${response.text}`);
 			}
 

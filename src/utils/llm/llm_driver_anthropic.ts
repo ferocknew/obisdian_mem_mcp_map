@@ -6,6 +6,46 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 		super(config);
 	}
 
+	// 构建完整的 API URL，智能处理路径
+	private buildApiUrl(path: string): string {
+		const baseUrl = this.config.apiUrl.trim();
+		// 如果用户已经配置了完整路径（包含 /messages 或 /v1/messages），直接使用
+		if (baseUrl.includes('/messages')) {
+			return baseUrl;
+		}
+		// 否则按照规范拼接：base url + /v1/messages
+		return `${baseUrl}/v1${path}`;
+	}
+
+	// 检查是否是智谱 AI
+	private isZhipuAI(): boolean {
+		return this.config.apiUrl.includes('bigmodel.cn');
+	}
+
+	// 转换 tools 格式以兼容不同的 API 提供商
+	private convertToolsFormat(tools: any[]): any[] {
+		if (!tools || tools.length === 0) {
+			return tools;
+		}
+
+		// 智谱 AI 需要将 name 字段提升到顶层
+		if (this.isZhipuAI()) {
+			return tools.map(tool => {
+				if (tool.type === 'function' && tool.function) {
+					return {
+						type: 'function',
+						name: tool.function.name,
+						description: tool.function.description,
+						parameters: tool.function.parameters
+					};
+				}
+				return tool;
+			});
+		}
+
+		return tools;
+	}
+
 	async testConnection(): Promise<LLMTestResult> {
 		console.log('[Anthropic Driver] 开始测试连接...');
 
@@ -16,7 +56,7 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 
 		try {
 			const response = await requestUrl({
-				url: `${this.config.apiUrl}/messages`,
+				url: this.buildApiUrl('/messages'),
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -66,13 +106,56 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 		}
 
 		try {
+			// 构建符合 Anthropic API 规范的消息数组
+			const buildAnthropicMessages = (messages: ChatMessage[]): any[] => {
+				return messages.map(msg => {
+					// 处理 assistant 消息（可能包含 tool_calls）
+					if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+						const contentBlocks: any[] = msg.toolCalls.map(tc => ({
+							type: 'tool_use',
+							id: tc.id,
+							name: tc.function.name,
+							input: JSON.parse(tc.function.arguments)
+						}));
+
+						// 如果有文本内容，添加文本块
+						if (msg.content && typeof msg.content === 'string' && msg.content.trim()) {
+							contentBlocks.unshift({
+								type: 'text',
+								text: msg.content
+							});
+						}
+
+						return {
+							role: 'assistant',
+							content: contentBlocks
+						};
+					}
+
+					// 处理 tool 消息（工具执行结果）
+					if (msg.role === 'tool') {
+						return {
+							role: 'user',
+							content: [{
+								type: 'tool_result',
+								tool_use_id: msg.toolCallId,
+								content: msg.content
+							}]
+						};
+					}
+
+					// 处理普通消息
+					return {
+						role: msg.role === 'system' ? 'user' : msg.role,
+						content: msg.content
+					};
+				});
+			};
+
 			const requestBody: any = {
 				model: this.config.modelName,
 				max_tokens: (this.config.maxOutputTokens || 96) * 1024,
-				messages: messages.map(msg => ({
-					role: msg.role === 'system' ? 'user' : msg.role,
-					content: msg.content
-				}))
+				messages: buildAnthropicMessages(messages)
 			};
 
 			// 如果配置了 SYSTEM 规则，添加到请求中
@@ -83,14 +166,18 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 
 			// 如果提供了 tools，添加到请求中
 			if (tools && tools.length > 0) {
-				requestBody.tools = tools;
-				console.log('[Anthropic Driver] ✓ 已添加 Tools，数量:', tools.length);
+				const convertedTools = this.convertToolsFormat(tools);
+				requestBody.tools = convertedTools;
+				console.log('[Anthropic Driver] ✓ 已添加 Tools，数量:', convertedTools.length);
+				if (this.isZhipuAI()) {
+					console.log('[Anthropic Driver] ✓ 已转换为智谱 AI 格式');
+				}
 			}
 
 			console.log('[Anthropic Driver] >>> 请求内容:', JSON.stringify(requestBody, null, 2));
 
 			const response = await requestUrl({
-				url: `${this.config.apiUrl}/messages`,
+				url: this.buildApiUrl('/messages'),
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -153,6 +240,8 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 
 	async sendMessageStream(messages: ChatMessage[], tools?: any[], onChunk?: any): Promise<ChatResponse> {
 		console.log('[Anthropic Driver] 开始流式发送消息');
+		console.log('[Anthropic Driver] Note: Obsidian\'s requestUrl doesn\'t support streaming directly');
+		console.log('[Anthropic Driver] Falling back to non-streaming request');
 
 		const validationError = this.validateConfig();
 		if (validationError) {
@@ -162,140 +251,8 @@ export class AnthropicLLMDriver extends LLMDriverBase {
 			};
 		}
 
-		try {
-			const requestBody: any = {
-				model: this.config.modelName,
-				max_tokens: (this.config.maxOutputTokens || 96) * 1024,
-				stream: true,
-				messages: messages.map(msg => ({
-					role: msg.role === 'system' ? 'user' : msg.role,
-					content: msg.content
-				}))
-			};
-
-			if (this.config.systemRules && this.config.systemRules.trim()) {
-				requestBody.system = this.config.systemRules;
-			}
-
-			if (tools && tools.length > 0) {
-				requestBody.tools = tools;
-			}
-
-			console.log('[Anthropic Driver Stream] >>> 请求内容:', JSON.stringify(requestBody, null, 2));
-
-			// 使用原生 fetch 支持流式响应
-			const response = await fetch(`${this.config.apiUrl}/messages`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'x-api-key': this.config.apiKey,
-					'anthropic-version': '2023-06-01'
-				},
-				body: JSON.stringify(requestBody),
-				signal: this.abortController?.signal
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				console.error('[Anthropic Driver Stream] ✗ API 返回错误:', response.status, errorText);
-				return {
-					success: false,
-					error: `API 返回错误状态: ${response.status}`
-				};
-			}
-
-			const reader = response.body?.getReader();
-			if (!reader) {
-				throw new Error('无法获取响应流');
-			}
-
-			const decoder = new TextDecoder();
-			let buffer = '';
-			let fullText = '';
-			const toolCalls: any[] = [];
-			let stopReason = '';
-
-			while (true) {
-				const { done, value } = await reader.read();
-
-				if (done) {
-					break;
-				}
-
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop() || '';
-
-				for (const line of lines) {
-					if (!line.trim() || !line.startsWith('data: ')) {
-						continue;
-					}
-
-					const data = line.slice(6);
-					if (data === '[DONE]') {
-						continue;
-					}
-
-					try {
-						const event = JSON.parse(data);
-
-						if (event.type === 'content_block_delta') {
-							if (event.delta?.type === 'text_delta') {
-								const text = event.delta.text;
-								fullText += text;
-
-								if (onChunk) {
-									onChunk({
-										type: 'text',
-										content: text
-									});
-								}
-							}
-						} else if (event.type === 'content_block_start') {
-							if (event.content_block?.type === 'tool_use') {
-								toolCalls.push({
-									id: event.content_block.id,
-									type: 'function',
-									function: {
-										name: event.content_block.name,
-										arguments: ''
-									}
-								});
-							}
-						} else if (event.type === 'content_block_delta') {
-							if (event.delta?.type === 'input_json_delta') {
-								const lastToolCall = toolCalls[toolCalls.length - 1];
-								if (lastToolCall) {
-									lastToolCall.function.arguments += event.delta.partial_json;
-								}
-							}
-						} else if (event.type === 'message_delta') {
-							if (event.delta?.stop_reason) {
-								stopReason = event.delta.stop_reason;
-							}
-						}
-					} catch (e) {
-						console.error('[Anthropic Driver Stream] 解析事件失败:', e, data);
-					}
-				}
-			}
-
-			console.log('[Anthropic Driver Stream] ✓ 流式接收完成，文本长度:', fullText.length, '工具调用数:', toolCalls.length);
-
-			return {
-				success: true,
-				message: fullText,
-				toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-				stopReason: stopReason
-			};
-
-		} catch (error) {
-			console.error('[Anthropic Driver Stream] ✗ 流式发送失败:', error);
-			return {
-				success: false,
-				error: error.message || '流式发送失败'
-			};
-		}
+		// 直接使用非流式请求
+		return await this.sendMessage(messages, tools);
 	}
 
 	async fetchModelsList(): Promise<ModelsListResult> {

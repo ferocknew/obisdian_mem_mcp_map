@@ -257,7 +257,7 @@ export class ChatController {
 
 				await this.handleToolCalls(response.toolCalls, tools);
 
-			} else if (response.success && response.message) {
+			} else if (response.success && response.message && response.message.trim()) {
 				// 如果没有触发过流式更新(buffer为空),说明是非流式响应,需要手动更新内容
 				if (streamingMsg.buffer.text === '') {
 					await this.ui.updateStreamingMessage(
@@ -272,8 +272,8 @@ export class ChatController {
 
 				console.log('[Chat Controller] ✓ 收到AI回复，当前对话历史长度:', this.state.getMessages().length);
 			} else {
-				// API调用失败
-				const errorMessage = response.error || '未知错误';
+				// API调用失败或返回空响应
+				const errorMessage = response.error || 'API返回了空响应，可能是由于内容过滤、安全限制或其他原因';
 				console.error('[Chat Controller] ✗ LLM API返回错误:', errorMessage);
 				new Notice(`AI回复失败: ${errorMessage}`);
 

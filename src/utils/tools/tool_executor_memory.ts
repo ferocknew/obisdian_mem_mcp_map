@@ -13,12 +13,25 @@ export class ToolExecutorMemory extends ToolExecutorBase {
 	/**
 	 * 执行创建实体
 	 */
-	async executeCreateEntities(args: { entities: Array<{ name: string; entityType: string; observations?: string[] }> }): Promise<ToolExecutionResult> {
+	async executeCreateEntities(args: { entities: Array<{ name: string; entityType: string; observations?: string[] }> | string }): Promise<ToolExecutionResult> {
 		const errorResult = this.checkAPIClient('memory_create_entities');
 		if (errorResult) return errorResult;
 
 		try {
-			const result = await this.apiClient!.create.createEntities(args.entities);
+			// 修复 AI 可能返回的 JSON 字符串
+			let fixedEntities = args.entities;
+			if (typeof fixedEntities === 'string') {
+				console.log('[Tool Executor] 检测到 entities 是字符串，尝试解析...');
+				try {
+					fixedEntities = JSON.parse(fixedEntities);
+					console.log('[Tool Executor] ✓ 解析成功:', fixedEntities);
+				} catch (e) {
+					console.error('[Tool Executor] ✗ 解析失败:', e);
+					throw new Error('entities 参数格式错误：无法解析 JSON 字符串');
+				}
+			}
+
+			const result = await this.apiClient!.create.createEntities(fixedEntities as any);
 			const createdEntities = result.new_entities || [];
 			const entityNames = createdEntities.map((e: any) => e.name).join('、');
 
@@ -40,12 +53,25 @@ export class ToolExecutorMemory extends ToolExecutorBase {
 	/**
 	 * 执行添加观察记录
 	 */
-	async executeAddObservations(args: { observations: Array<{ entityName: string; content: string }> }): Promise<ToolExecutionResult> {
+	async executeAddObservations(args: { observations: Array<{ entityName: string; content: string }> | string }): Promise<ToolExecutionResult> {
 		const errorResult = this.checkAPIClient('memory_add_observations');
 		if (errorResult) return errorResult;
 
 		try {
-			const result = await this.apiClient!.create.addObservations(args.observations);
+			// 修复 AI 可能返回的 JSON 字符串
+			let fixedObservations = args.observations;
+			if (typeof fixedObservations === 'string') {
+				console.log('[Tool Executor] 检测到 observations 是字符串，尝试解析...');
+				try {
+					fixedObservations = JSON.parse(fixedObservations);
+					console.log('[Tool Executor] ✓ 解析成功:', fixedObservations);
+				} catch (e) {
+					console.error('[Tool Executor] ✗ 解析失败:', e);
+					throw new Error('observations 参数格式错误：无法解析 JSON 字符串');
+				}
+			}
+
+			const result = await this.apiClient!.create.addObservations(fixedObservations as any);
 			return {
 				success: true,
 				toolName: 'memory_add_observations',
@@ -69,7 +95,20 @@ export class ToolExecutorMemory extends ToolExecutorBase {
 		if (errorResult) return errorResult;
 
 		try {
-			const result = await this.apiClient!.create.createRelations(args.relations, args.autoCreateEntities);
+			// 修复 AI 可能返回的 JSON 字符串
+			let fixedRelations = args.relations;
+			if (typeof fixedRelations === 'string') {
+				console.log('[Tool Executor] 检测到 relations 是字符串，尝试解析...');
+				try {
+					fixedRelations = JSON.parse(fixedRelations);
+					console.log('[Tool Executor] ✓ 解析成功:', fixedRelations);
+				} catch (e) {
+					console.error('[Tool Executor] ✗ 解析失败:', e);
+					throw new Error('relations 参数格式错误：无法解析 JSON 字符串');
+				}
+			}
+
+			const result = await this.apiClient!.create.createRelations(fixedRelations, args.autoCreateEntities);
 			return {
 				success: true,
 				toolName: 'memory_create_relations',
@@ -162,12 +201,25 @@ export class ToolExecutorMemory extends ToolExecutorBase {
 	/**
 	 * 执行按名称检索节点
 	 */
-	async executeOpenNodes(args: { names: string[] }): Promise<ToolExecutionResult> {
+	async executeOpenNodes(args: { names: string[] | string }): Promise<ToolExecutionResult> {
 		const errorResult = this.checkAPIClient('memory_open_nodes');
 		if (errorResult) return errorResult;
 
 		try {
-			const result = await this.apiClient!.search.openNodes(args.names);
+			// 修复 AI 可能返回的 JSON 字符串
+			let fixedNames = args.names;
+			if (typeof fixedNames === 'string') {
+				console.log('[Tool Executor] 检测到 names 是字符串，尝试解析...');
+				try {
+					fixedNames = JSON.parse(fixedNames);
+					console.log('[Tool Executor] ✓ 解析成功:', fixedNames);
+				} catch (e) {
+					console.error('[Tool Executor] ✗ 解析失败:', e);
+					throw new Error('names 参数格式错误：无法解析 JSON 字符串');
+				}
+			}
+
+			const result = await this.apiClient!.search.openNodes(fixedNames as any);
 			return {
 				success: true,
 				toolName: 'memory_open_nodes',
@@ -212,12 +264,25 @@ export class ToolExecutorMemory extends ToolExecutorBase {
 	/**
 	 * 执行删除观察记录
 	 */
-	async executeDeleteObservations(args: { deletions: Array<{ entityName: string; observations: string[] }> }): Promise<ToolExecutionResult> {
+	async executeDeleteObservations(args: { deletions: Array<{ entityName: string; observations: string[] }> | string }): Promise<ToolExecutionResult> {
 		const errorResult = this.checkAPIClient('memory_delete_observations');
 		if (errorResult) return errorResult;
 
 		try {
-			const result = await this.apiClient!.delete.deleteObservations(args.deletions);
+			// 修复 AI 可能返回的 JSON 字符串
+			let fixedDeletions = args.deletions;
+			if (typeof fixedDeletions === 'string') {
+				console.log('[Tool Executor] 检测到 deletions 是字符串，尝试解析...');
+				try {
+					fixedDeletions = JSON.parse(fixedDeletions);
+					console.log('[Tool Executor] ✓ 解析成功:', fixedDeletions);
+				} catch (e) {
+					console.error('[Tool Executor] ✗ 解析失败:', e);
+					throw new Error('deletions 参数格式错误：无法解析 JSON 字符串');
+				}
+			}
+
+			const result = await this.apiClient!.delete.deleteObservations(fixedDeletions as any);
 			return {
 				success: true,
 				toolName: 'memory_delete_observations',
@@ -236,12 +301,25 @@ export class ToolExecutorMemory extends ToolExecutorBase {
 	/**
 	 * 执行删除关系
 	 */
-	async executeDeleteRelations(args: { relations: Array<{ from: string; to: string; relationType: string }> }): Promise<ToolExecutionResult> {
+	async executeDeleteRelations(args: { relations: Array<{ from: string; to: string; relationType: string }> | string }): Promise<ToolExecutionResult> {
 		const errorResult = this.checkAPIClient('memory_delete_relations');
 		if (errorResult) return errorResult;
 
 		try {
-			const result = await this.apiClient!.delete.deleteRelations(args.relations);
+			// 修复 AI 可能返回的 JSON 字符串
+			let fixedRelations = args.relations;
+			if (typeof fixedRelations === 'string') {
+				console.log('[Tool Executor] 检测到 relations 是字符串，尝试解析...');
+				try {
+					fixedRelations = JSON.parse(fixedRelations);
+					console.log('[Tool Executor] ✓ 解析成功:', fixedRelations);
+				} catch (e) {
+					console.error('[Tool Executor] ✗ 解析失败:', e);
+					throw new Error('relations 参数格式错误：无法解析 JSON 字符串');
+				}
+			}
+
+			const result = await this.apiClient!.delete.deleteRelations(fixedRelations as any);
 			return {
 				success: true,
 				toolName: 'memory_delete_relations',

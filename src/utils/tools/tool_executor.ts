@@ -88,9 +88,19 @@ export class ToolExecutor {
 	 */
 	async executeToolCall(toolCall: ToolCall): Promise<ToolExecutionResult> {
 		const functionName = toolCall.function.name;
-		const args = JSON.parse(toolCall.function.arguments);
+		const rawArgs = toolCall.function.arguments;
 
-		console.log(`[Tool Executor] 执行工具: ${functionName}，参数:`, args);
+		console.log(`[Tool Executor] 原始参数 (${functionName}):`, rawArgs);
+
+		let args;
+		try {
+			args = JSON.parse(rawArgs);
+		} catch (e) {
+			console.error(`[Tool Executor] JSON 解析失败:`, e);
+			throw new Error(`工具参数格式错误: ${e.message}`);
+		}
+
+		console.log(`[Tool Executor] 解析后参数 (${functionName}):`, args);
 
 		try {
 			// 基础工具

@@ -129,6 +129,9 @@ var _APISystemClient = class _APISystemClient {
     }
     const url = `${this.baseUrl}${path}`;
     console.log(`[API System] ${method} ${url}`);
+    if (body) {
+      console.log(`[API System] >>> \u8BF7\u6C42\u4F53:`, JSON.stringify(body, null, 2));
+    }
     try {
       const response = await (0, import_obsidian.requestUrl)({
         url,
@@ -137,6 +140,7 @@ var _APISystemClient = class _APISystemClient {
         body: body ? JSON.stringify(body) : void 0
       });
       if (response.status >= 400) {
+        console.error(`[API System] <<< \u54CD\u5E94\u9519\u8BEF (${response.status}):`, response.text);
         throw new Error(`HTTP ${response.status}: ${response.text}`);
       }
       return response.json;
@@ -594,6 +598,38 @@ var _AnthropicLLMDriver = class _AnthropicLLMDriver extends LLMDriverBase {
   constructor(config) {
     super(config);
   }
+  // 构建完整的 API URL，智能处理路径
+  buildApiUrl(path) {
+    const baseUrl = this.config.apiUrl.trim();
+    if (baseUrl.includes("/messages")) {
+      return baseUrl;
+    }
+    return `${baseUrl}/v1${path}`;
+  }
+  // 检查是否是智谱 AI
+  isZhipuAI() {
+    return this.config.apiUrl.includes("bigmodel.cn");
+  }
+  // 转换 tools 格式以兼容不同的 API 提供商
+  convertToolsFormat(tools) {
+    if (!tools || tools.length === 0) {
+      return tools;
+    }
+    if (this.isZhipuAI()) {
+      return tools.map((tool) => {
+        if (tool.type === "function" && tool.function) {
+          return {
+            type: "function",
+            name: tool.function.name,
+            description: tool.function.description,
+            parameters: tool.function.parameters
+          };
+        }
+        return tool;
+      });
+    }
+    return tools;
+  }
   async testConnection() {
     console.log("[Anthropic Driver] \u5F00\u59CB\u6D4B\u8BD5\u8FDE\u63A5...");
     const validationError = this.validateConfig();
@@ -602,7 +638,7 @@ var _AnthropicLLMDriver = class _AnthropicLLMDriver extends LLMDriverBase {
     }
     try {
       const response = await (0, import_obsidian4.requestUrl)({
-        url: `${this.config.apiUrl}/messages`,
+        url: this.buildApiUrl("/messages"),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -648,25 +684,62 @@ var _AnthropicLLMDriver = class _AnthropicLLMDriver extends LLMDriverBase {
       };
     }
     try {
+      const buildAnthropicMessages = /* @__PURE__ */ __name((messages2) => {
+        return messages2.map((msg) => {
+          if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+            const contentBlocks = msg.toolCalls.map((tc) => ({
+              type: "tool_use",
+              id: tc.id,
+              name: tc.function.name,
+              input: JSON.parse(tc.function.arguments)
+            }));
+            if (msg.content && typeof msg.content === "string" && msg.content.trim()) {
+              contentBlocks.unshift({
+                type: "text",
+                text: msg.content
+              });
+            }
+            return {
+              role: "assistant",
+              content: contentBlocks
+            };
+          }
+          if (msg.role === "tool") {
+            return {
+              role: "user",
+              content: [{
+                type: "tool_result",
+                tool_use_id: msg.toolCallId,
+                content: msg.content
+              }]
+            };
+          }
+          return {
+            role: msg.role === "system" ? "user" : msg.role,
+            content: msg.content
+          };
+        });
+      }, "buildAnthropicMessages");
       const requestBody = {
         model: this.config.modelName,
         max_tokens: (this.config.maxOutputTokens || 96) * 1024,
-        messages: messages.map((msg) => ({
-          role: msg.role === "system" ? "user" : msg.role,
-          content: msg.content
-        }))
+        messages: buildAnthropicMessages(messages)
       };
       if (this.config.systemRules && this.config.systemRules.trim()) {
         requestBody.system = this.config.systemRules;
         console.log("[Anthropic Driver] \u2713 \u5DF2\u6DFB\u52A0 SYSTEM \u89C4\u5219");
       }
       if (tools && tools.length > 0) {
-        requestBody.tools = tools;
-        console.log("[Anthropic Driver] \u2713 \u5DF2\u6DFB\u52A0 Tools\uFF0C\u6570\u91CF:", tools.length);
+        const convertedTools = this.convertToolsFormat(tools);
+        requestBody.tools = convertedTools;
+        console.log("[Anthropic Driver] \u2713 \u5DF2\u6DFB\u52A0 Tools\uFF0C\u6570\u91CF:", convertedTools.length);
+        if (this.isZhipuAI()) {
+          console.log("[Anthropic Driver] \u2713 \u5DF2\u8F6C\u6362\u4E3A\u667A\u8C31 AI \u683C\u5F0F");
+        }
       }
       console.log("[Anthropic Driver] >>> \u8BF7\u6C42\u5185\u5BB9:", JSON.stringify(requestBody, null, 2));
       const response = await (0, import_obsidian4.requestUrl)({
-        url: `${this.config.apiUrl}/messages`,
+        url: this.buildApiUrl("/messages"),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -720,8 +793,9 @@ var _AnthropicLLMDriver = class _AnthropicLLMDriver extends LLMDriverBase {
     }
   }
   async sendMessageStream(messages, tools, onChunk) {
-    var _a, _b, _c, _d, _e, _f;
     console.log("[Anthropic Driver] \u5F00\u59CB\u6D41\u5F0F\u53D1\u9001\u6D88\u606F");
+    console.log("[Anthropic Driver] Note: Obsidian's requestUrl doesn't support streaming directly");
+    console.log("[Anthropic Driver] Falling back to non-streaming request");
     const validationError = this.validateConfig();
     if (validationError) {
       return {
@@ -729,121 +803,7 @@ var _AnthropicLLMDriver = class _AnthropicLLMDriver extends LLMDriverBase {
         error: validationError.message
       };
     }
-    try {
-      const requestBody = {
-        model: this.config.modelName,
-        max_tokens: (this.config.maxOutputTokens || 96) * 1024,
-        stream: true,
-        messages: messages.map((msg) => ({
-          role: msg.role === "system" ? "user" : msg.role,
-          content: msg.content
-        }))
-      };
-      if (this.config.systemRules && this.config.systemRules.trim()) {
-        requestBody.system = this.config.systemRules;
-      }
-      if (tools && tools.length > 0) {
-        requestBody.tools = tools;
-      }
-      console.log("[Anthropic Driver Stream] >>> \u8BF7\u6C42\u5185\u5BB9:", JSON.stringify(requestBody, null, 2));
-      const response = await fetch(`${this.config.apiUrl}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.config.apiKey,
-          "anthropic-version": "2023-06-01"
-        },
-        body: JSON.stringify(requestBody),
-        signal: (_a = this.abortController) == null ? void 0 : _a.signal
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[Anthropic Driver Stream] \u2717 API \u8FD4\u56DE\u9519\u8BEF:", response.status, errorText);
-        return {
-          success: false,
-          error: `API \u8FD4\u56DE\u9519\u8BEF\u72B6\u6001: ${response.status}`
-        };
-      }
-      const reader = (_b = response.body) == null ? void 0 : _b.getReader();
-      if (!reader) {
-        throw new Error("\u65E0\u6CD5\u83B7\u53D6\u54CD\u5E94\u6D41");
-      }
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-      const toolCalls = [];
-      let stopReason = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.trim() || !line.startsWith("data: ")) {
-            continue;
-          }
-          const data = line.slice(6);
-          if (data === "[DONE]") {
-            continue;
-          }
-          try {
-            const event = JSON.parse(data);
-            if (event.type === "content_block_delta") {
-              if (((_c = event.delta) == null ? void 0 : _c.type) === "text_delta") {
-                const text = event.delta.text;
-                fullText += text;
-                if (onChunk) {
-                  onChunk({
-                    type: "text",
-                    content: text
-                  });
-                }
-              }
-            } else if (event.type === "content_block_start") {
-              if (((_d = event.content_block) == null ? void 0 : _d.type) === "tool_use") {
-                toolCalls.push({
-                  id: event.content_block.id,
-                  type: "function",
-                  function: {
-                    name: event.content_block.name,
-                    arguments: ""
-                  }
-                });
-              }
-            } else if (event.type === "content_block_delta") {
-              if (((_e = event.delta) == null ? void 0 : _e.type) === "input_json_delta") {
-                const lastToolCall = toolCalls[toolCalls.length - 1];
-                if (lastToolCall) {
-                  lastToolCall.function.arguments += event.delta.partial_json;
-                }
-              }
-            } else if (event.type === "message_delta") {
-              if ((_f = event.delta) == null ? void 0 : _f.stop_reason) {
-                stopReason = event.delta.stop_reason;
-              }
-            }
-          } catch (e) {
-            console.error("[Anthropic Driver Stream] \u89E3\u6790\u4E8B\u4EF6\u5931\u8D25:", e, data);
-          }
-        }
-      }
-      console.log("[Anthropic Driver Stream] \u2713 \u6D41\u5F0F\u63A5\u6536\u5B8C\u6210\uFF0C\u6587\u672C\u957F\u5EA6:", fullText.length, "\u5DE5\u5177\u8C03\u7528\u6570:", toolCalls.length);
-      return {
-        success: true,
-        message: fullText,
-        toolCalls: toolCalls.length > 0 ? toolCalls : void 0,
-        stopReason
-      };
-    } catch (error) {
-      console.error("[Anthropic Driver Stream] \u2717 \u6D41\u5F0F\u53D1\u9001\u5931\u8D25:", error);
-      return {
-        success: false,
-        error: error.message || "\u6D41\u5F0F\u53D1\u9001\u5931\u8D25"
-      };
-    }
+    return await this.sendMessage(messages, tools);
   }
   async fetchModelsList() {
     console.log("[Anthropic Driver] \u5F00\u59CB\u83B7\u53D6\u6A21\u578B\u5217\u8868...");
@@ -2185,7 +2145,18 @@ var _ToolExecutorMemory = class _ToolExecutorMemory extends ToolExecutorBase {
     const errorResult = this.checkAPIClient("memory_create_entities");
     if (errorResult) return errorResult;
     try {
-      const result = await this.apiClient.create.createEntities(args.entities);
+      let fixedEntities = args.entities;
+      if (typeof fixedEntities === "string") {
+        console.log("[Tool Executor] \u68C0\u6D4B\u5230 entities \u662F\u5B57\u7B26\u4E32\uFF0C\u5C1D\u8BD5\u89E3\u6790...");
+        try {
+          fixedEntities = JSON.parse(fixedEntities);
+          console.log("[Tool Executor] \u2713 \u89E3\u6790\u6210\u529F:", fixedEntities);
+        } catch (e) {
+          console.error("[Tool Executor] \u2717 \u89E3\u6790\u5931\u8D25:", e);
+          throw new Error("entities \u53C2\u6570\u683C\u5F0F\u9519\u8BEF\uFF1A\u65E0\u6CD5\u89E3\u6790 JSON \u5B57\u7B26\u4E32");
+        }
+      }
+      const result = await this.apiClient.create.createEntities(fixedEntities);
       const createdEntities = result.new_entities || [];
       const entityNames = createdEntities.map((e) => e.name).join("\u3001");
       return {
@@ -2210,7 +2181,18 @@ var _ToolExecutorMemory = class _ToolExecutorMemory extends ToolExecutorBase {
     const errorResult = this.checkAPIClient("memory_add_observations");
     if (errorResult) return errorResult;
     try {
-      const result = await this.apiClient.create.addObservations(args.observations);
+      let fixedObservations = args.observations;
+      if (typeof fixedObservations === "string") {
+        console.log("[Tool Executor] \u68C0\u6D4B\u5230 observations \u662F\u5B57\u7B26\u4E32\uFF0C\u5C1D\u8BD5\u89E3\u6790...");
+        try {
+          fixedObservations = JSON.parse(fixedObservations);
+          console.log("[Tool Executor] \u2713 \u89E3\u6790\u6210\u529F:", fixedObservations);
+        } catch (e) {
+          console.error("[Tool Executor] \u2717 \u89E3\u6790\u5931\u8D25:", e);
+          throw new Error("observations \u53C2\u6570\u683C\u5F0F\u9519\u8BEF\uFF1A\u65E0\u6CD5\u89E3\u6790 JSON \u5B57\u7B26\u4E32");
+        }
+      }
+      const result = await this.apiClient.create.addObservations(fixedObservations);
       return {
         success: true,
         toolName: "memory_add_observations",
@@ -2233,7 +2215,18 @@ var _ToolExecutorMemory = class _ToolExecutorMemory extends ToolExecutorBase {
     const errorResult = this.checkAPIClient("memory_create_relations");
     if (errorResult) return errorResult;
     try {
-      const result = await this.apiClient.create.createRelations(args.relations, args.autoCreateEntities);
+      let fixedRelations = args.relations;
+      if (typeof fixedRelations === "string") {
+        console.log("[Tool Executor] \u68C0\u6D4B\u5230 relations \u662F\u5B57\u7B26\u4E32\uFF0C\u5C1D\u8BD5\u89E3\u6790...");
+        try {
+          fixedRelations = JSON.parse(fixedRelations);
+          console.log("[Tool Executor] \u2713 \u89E3\u6790\u6210\u529F:", fixedRelations);
+        } catch (e) {
+          console.error("[Tool Executor] \u2717 \u89E3\u6790\u5931\u8D25:", e);
+          throw new Error("relations \u53C2\u6570\u683C\u5F0F\u9519\u8BEF\uFF1A\u65E0\u6CD5\u89E3\u6790 JSON \u5B57\u7B26\u4E32");
+        }
+      }
+      const result = await this.apiClient.create.createRelations(fixedRelations, args.autoCreateEntities);
       return {
         success: true,
         toolName: "memory_create_relations",
@@ -2326,7 +2319,18 @@ var _ToolExecutorMemory = class _ToolExecutorMemory extends ToolExecutorBase {
     const errorResult = this.checkAPIClient("memory_open_nodes");
     if (errorResult) return errorResult;
     try {
-      const result = await this.apiClient.search.openNodes(args.names);
+      let fixedNames = args.names;
+      if (typeof fixedNames === "string") {
+        console.log("[Tool Executor] \u68C0\u6D4B\u5230 names \u662F\u5B57\u7B26\u4E32\uFF0C\u5C1D\u8BD5\u89E3\u6790...");
+        try {
+          fixedNames = JSON.parse(fixedNames);
+          console.log("[Tool Executor] \u2713 \u89E3\u6790\u6210\u529F:", fixedNames);
+        } catch (e) {
+          console.error("[Tool Executor] \u2717 \u89E3\u6790\u5931\u8D25:", e);
+          throw new Error("names \u53C2\u6570\u683C\u5F0F\u9519\u8BEF\uFF1A\u65E0\u6CD5\u89E3\u6790 JSON \u5B57\u7B26\u4E32");
+        }
+      }
+      const result = await this.apiClient.search.openNodes(fixedNames);
       return {
         success: true,
         toolName: "memory_open_nodes",
@@ -2371,7 +2375,18 @@ var _ToolExecutorMemory = class _ToolExecutorMemory extends ToolExecutorBase {
     const errorResult = this.checkAPIClient("memory_delete_observations");
     if (errorResult) return errorResult;
     try {
-      const result = await this.apiClient.delete.deleteObservations(args.deletions);
+      let fixedDeletions = args.deletions;
+      if (typeof fixedDeletions === "string") {
+        console.log("[Tool Executor] \u68C0\u6D4B\u5230 deletions \u662F\u5B57\u7B26\u4E32\uFF0C\u5C1D\u8BD5\u89E3\u6790...");
+        try {
+          fixedDeletions = JSON.parse(fixedDeletions);
+          console.log("[Tool Executor] \u2713 \u89E3\u6790\u6210\u529F:", fixedDeletions);
+        } catch (e) {
+          console.error("[Tool Executor] \u2717 \u89E3\u6790\u5931\u8D25:", e);
+          throw new Error("deletions \u53C2\u6570\u683C\u5F0F\u9519\u8BEF\uFF1A\u65E0\u6CD5\u89E3\u6790 JSON \u5B57\u7B26\u4E32");
+        }
+      }
+      const result = await this.apiClient.delete.deleteObservations(fixedDeletions);
       return {
         success: true,
         toolName: "memory_delete_observations",
@@ -2393,7 +2408,18 @@ var _ToolExecutorMemory = class _ToolExecutorMemory extends ToolExecutorBase {
     const errorResult = this.checkAPIClient("memory_delete_relations");
     if (errorResult) return errorResult;
     try {
-      const result = await this.apiClient.delete.deleteRelations(args.relations);
+      let fixedRelations = args.relations;
+      if (typeof fixedRelations === "string") {
+        console.log("[Tool Executor] \u68C0\u6D4B\u5230 relations \u662F\u5B57\u7B26\u4E32\uFF0C\u5C1D\u8BD5\u89E3\u6790...");
+        try {
+          fixedRelations = JSON.parse(fixedRelations);
+          console.log("[Tool Executor] \u2713 \u89E3\u6790\u6210\u529F:", fixedRelations);
+        } catch (e) {
+          console.error("[Tool Executor] \u2717 \u89E3\u6790\u5931\u8D25:", e);
+          throw new Error("relations \u53C2\u6570\u683C\u5F0F\u9519\u8BEF\uFF1A\u65E0\u6CD5\u89E3\u6790 JSON \u5B57\u7B26\u4E32");
+        }
+      }
+      const result = await this.apiClient.delete.deleteRelations(fixedRelations);
       return {
         success: true,
         toolName: "memory_delete_relations",
@@ -2533,8 +2559,16 @@ var _ToolExecutor = class _ToolExecutor {
    */
   async executeToolCall(toolCall) {
     const functionName = toolCall.function.name;
-    const args = JSON.parse(toolCall.function.arguments);
-    console.log(`[Tool Executor] \u6267\u884C\u5DE5\u5177: ${functionName}\uFF0C\u53C2\u6570:`, args);
+    const rawArgs = toolCall.function.arguments;
+    console.log(`[Tool Executor] \u539F\u59CB\u53C2\u6570 (${functionName}):`, rawArgs);
+    let args;
+    try {
+      args = JSON.parse(rawArgs);
+    } catch (e) {
+      console.error(`[Tool Executor] JSON \u89E3\u6790\u5931\u8D25:`, e);
+      throw new Error(`\u5DE5\u5177\u53C2\u6570\u683C\u5F0F\u9519\u8BEF: ${e.message}`);
+    }
+    console.log(`[Tool Executor] \u89E3\u6790\u540E\u53C2\u6570 (${functionName}):`, args);
     try {
       switch (functionName) {
         case "whoogle_search":
@@ -4489,7 +4523,7 @@ ${message}`;
           streamingMsg.messageDiv.remove();
         }
         await this.handleToolCalls(response.toolCalls, tools);
-      } else if (response.success && response.message) {
+      } else if (response.success && response.message && response.message.trim()) {
         if (streamingMsg.buffer.text === "") {
           await this.ui.updateStreamingMessage(
             streamingMsg.contentDiv,
@@ -4500,7 +4534,7 @@ ${message}`;
         this.state.addMessage({ role: "assistant", content: response.message });
         console.log("[Chat Controller] \u2713 \u6536\u5230AI\u56DE\u590D\uFF0C\u5F53\u524D\u5BF9\u8BDD\u5386\u53F2\u957F\u5EA6:", this.state.getMessages().length);
       } else {
-        const errorMessage = response.error || "\u672A\u77E5\u9519\u8BEF";
+        const errorMessage = response.error || "API\u8FD4\u56DE\u4E86\u7A7A\u54CD\u5E94\uFF0C\u53EF\u80FD\u662F\u7531\u4E8E\u5185\u5BB9\u8FC7\u6EE4\u3001\u5B89\u5168\u9650\u5236\u6216\u5176\u4ED6\u539F\u56E0";
         console.error("[Chat Controller] \u2717 LLM API\u8FD4\u56DE\u9519\u8BEF:", errorMessage);
         new import_obsidian11.Notice(`AI\u56DE\u590D\u5931\u8D25: ${errorMessage}`);
         streamingMsg.messageDiv.remove();
