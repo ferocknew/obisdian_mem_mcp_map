@@ -509,9 +509,27 @@ export const chatViewStyles = `
 
 	/* 移动端适配：优化键盘弹起时的布局 */
 	@media (max-width: 768px) {
+		/* 使用固定定位确保输入区域始终在底部 */
 		.ai-chat-input-container {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			z-index: 1000;
 			padding: 6px 8px;
 			gap: 4px;
+			max-width: 100vw;
+			background: var(--background-primary);
+			box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		/* 为消息区域添加底部内边距，避免被输入框遮挡 */
+		.ai-chat-messages {
+			padding: 10px;
+			padding-bottom: 120px;
+			gap: 8px;
+			/* 使用动态视口高度 */
+			height: calc(100dvh - 120px);
 		}
 
 		.ai-chat-input-toolbar {
@@ -553,11 +571,6 @@ export const chatViewStyles = `
 		.ai-chat-context-file-close {
 			width: 16px;
 			height: 16px;
-		}
-
-		.ai-chat-messages {
-			padding: 10px;
-			gap: 8px;
 		}
 
 		.ai-chat-message {
