@@ -297,20 +297,31 @@ export class MemorySearchView extends ItemView {
 				position: relative;
 			}
 
-			/* 移动端适配 */
+			/* 移动端适配：强制移除 Obsidian 容器的默认样式 */
 			@media (max-width: 768px) {
+				/* 移除 Obsidian ItemView 容器的 padding */
+				.memory-search-view,
+				.memory-search-view > * {
+					padding: 0 !important;
+					margin: 0 !important;
+				}
+
 				.memory-search-view {
-					height: 100dvh;
-					max-height: 100dvh;
-					padding: 0;
-					position: relative;
-					overflow: hidden;
-					display: flex;
-					flex-direction: column;
+					height: 100dvh !important;
+					max-height: 100dvh !important;
+					min-height: 100dvh !important;
+					display: flex !important;
+					flex-direction: column !important;
+					overflow: hidden !important;
 				}
 
 				.memory-search-tabs {
-					flex-shrink: 0;
+					flex-shrink: 0 !important;
+				}
+
+				/* 移除 Obsidian 添加的任何其他容器间距 */
+				.workspace-leaf-content {
+					padding: 0 !important;
 				}
 			}
 

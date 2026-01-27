@@ -14,6 +14,7 @@ export class ChatUIManager {
 	constructor(container: HTMLElement, dependencies: ChatDependencies) {
 		this.dependencies = dependencies;
 		this.ui = this.createInterface(container);
+		this.setupMobileKeyboardHandling();
 	}
 
 	/**
@@ -409,6 +410,64 @@ export class ChatUIManager {
 		if (onRemove) {
 			closeButton.addEventListener('click', onRemove);
 		}
+	}
+
+	/**
+	 * 设置移动端键盘处理
+	 * 在移动端，当键盘弹起时，调整输入区域使其紧贴键盘
+	 */
+	private setupMobileKeyboardHandling(): void {
+		// 检测是否为移动设备
+		const isMobile = window.innerWidth <= 768;
+
+		if (!isMobile) return;
+
+		const input = this.ui.input;
+		const container = this.ui.container;
+
+		// 监听输入框 focus 事件
+		input.addEventListener('focus', () => {
+			console.log('[Chat UI] 输入框获得焦点，调整移动端布局');
+			this.adjustForMobileKeyboard();
+		});
+
+		// 监听窗口 resize 事件（键盘弹起会触发 resize）
+		window.addEventListener('resize', () => {
+			if (document.activeElement === input) {
+				this.adjustForMobileKeyboard();
+			}
+		});
+
+		// 监听可视化视口变化（更准确的键盘检测）
+		if ('visualViewport' in window) {
+			window.visualViewport!.addEventListener('resize', () => {
+				if (document.activeElement === input) {
+					this.adjustForMobileKeyboard();
+				}
+			});
+		}
+	}
+
+	/**
+	 * 调整布局以适应移动端键盘
+	 */
+	private adjustForMobileKeyboard(): void {
+		const input = this.ui.input;
+		const inputContainer = this.ui.inputContainer;
+		const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+		console.log('[Chat UI] 调整移动端键盘布局，视口高度:', viewportHeight);
+
+		// 计算输入框应该距离底部的位置
+		// 使用 scrollTo 确保输入框可见
+		setTimeout(() => {
+			input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+			// 设置容器高度以匹配当前视口
+			if (this.ui.container) {
+				this.ui.container.style.height = `${viewportHeight}px`;
+			}
+		}, 300);
 	}
 
 	/**
