@@ -506,4 +506,76 @@ export const chatViewStyles = `
 			transform: scale(1.2);
 		}
 	}
+
+	/* 移动端适配：优化键盘弹起时的布局 */
+	@media (max-width: 768px) {
+		.ai-chat-input-container {
+			padding: 6px 8px;
+			gap: 4px;
+		}
+
+		.ai-chat-input-toolbar {
+			gap: 4px;
+			padding: 2px 0;
+		}
+
+		.ai-chat-input-toolbar-button {
+			width: 28px;
+			height: 28px;
+		}
+
+		.ai-chat-input-wrapper {
+			gap: 6px;
+		}
+
+		.ai-chat-input {
+			height: 36px;
+			padding: 0 10px;
+			font-size: 14px;
+		}
+
+		.ai-chat-send-button {
+			height: 36px;
+			padding: 8px 16px;
+			font-size: 14px;
+		}
+
+		.ai-chat-context-file-tag {
+			padding: 4px 8px;
+			font-size: 12px;
+			gap: 4px;
+		}
+
+		.ai-chat-context-file-name {
+			max-width: 150px;
+		}
+
+		.ai-chat-context-file-close {
+			width: 16px;
+			height: 16px;
+		}
+
+		.ai-chat-messages {
+			padding: 10px;
+			gap: 8px;
+		}
+
+		.ai-chat-message {
+			max-width: 90%;
+		}
+
+		.ai-chat-toolbar {
+			padding: 6px 8px;
+		}
+
+		.ai-chat-title {
+			font-size: 13px;
+			max-width: 200px;
+		}
+
+		.ai-chat-toolbar-button {
+			width: 26px;
+			height: 26px;
+		}
+	}
 `;
