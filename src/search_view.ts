@@ -296,18 +296,12 @@ export class MemorySearchView extends ItemView {
 				flex-direction: column;
 			}
 
-			/* 移动端适配：使用动态视口高度 */
+			/* 移动端适配：移除多余间距 */
 			@media (max-width: 768px) {
 				.memory-search-view {
 					height: 100dvh;
 					max-height: 100dvh;
 					padding: 0;
-				}
-
-				.memory-search-tabs {
-					flex-shrink: 0;
-					margin: 0;
-					padding: 8px;
 				}
 			}
 

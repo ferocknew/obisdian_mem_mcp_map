@@ -17,6 +17,7 @@ export const searchPageStyles = `
 		margin-bottom: 15px;
 		border-bottom: 2px solid var(--background-modifier-border);
 		padding-bottom: 8px;
+		flex-shrink: 0;
 	}
 
 	.memory-search-tab {
@@ -180,5 +181,19 @@ export const searchPageStyles = `
 		border-left: 2px solid var(--background-modifier-border);
 		padding-left: 8px;
 		margin-bottom: 4px;
+	}
+
+	/* 移动端适配 */
+	@media (max-width: 768px) {
+		.memory-search-tabs {
+			margin-bottom: 0;
+			padding: 6px 8px;
+			gap: 4px;
+		}
+
+		.memory-search-tab {
+			padding: 6px 12px;
+			font-size: 13px;
+		}
 	}
 `;
