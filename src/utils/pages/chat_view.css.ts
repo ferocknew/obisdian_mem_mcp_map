@@ -509,10 +509,16 @@ export const chatViewStyles = `
 
 	/* 移动端适配：优化键盘弹起时的布局 */
 	@media (max-width: 768px) {
-		/* 整个聊天容器使用动态视口高度 */
+		/* 整个聊天容器：使用flex布局占据标签页下方的所有空间 */
 		.ai-chat-container {
-			height: 100dvh;
-			max-height: 100dvh;
+		position: absolute;
+			top: 50px; /* 标签页的大致高度 */
+			left: 0;
+			right: 0;
+			bottom: 0;
+			display: flex;
+			flex-direction: column;
+			background: var(--background-primary);
 		}
 
 		/* 工具栏最小化 */
@@ -538,7 +544,7 @@ export const chatViewStyles = `
 			height: 14px;
 		}
 
-		/* 消息区域 */
+		/* 消息区域：占据剩余空间 */
 		.ai-chat-messages {
 			padding: 8px;
 			gap: 6px;
@@ -551,7 +557,7 @@ export const chatViewStyles = `
 			max-width: 90%;
 		}
 
-		/* 输入区域最小化 */
+		/* 输入区域最小化：固定在底部 */
 		.ai-chat-input-container {
 			padding: 4px 6px;
 			gap: 2px;
