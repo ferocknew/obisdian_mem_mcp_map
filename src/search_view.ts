@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
 import MemoryGraphPlugin from '@/main';
 import { APIClient } from '@/utils/api/api_client';
 import { ChatView } from '@/utils/pages/chat_view';
@@ -211,6 +211,13 @@ export class MemorySearchView extends ItemView {
 			// 显示AI聊天界面，隐藏搜索界面
 			this.searchPageView.hide();
 			this.chatView.show();
+
+			// 调试信息
+			const containerDisplay = this.chatView.chatContainer.style.display;
+			const inputExists = !!this.chatView.chatInput;
+			const inputDisplay = this.chatView.chatInput?.style.display || 'unknown';
+
+			new Notice(`切换到聊天\n容器: ${containerDisplay}\n输入框存在: ${inputExists}\n输入框: ${inputDisplay}`, 5000);
 		} else {
 			// 显示搜索界面，隐藏AI聊天界面
 			this.searchPageView.show();
