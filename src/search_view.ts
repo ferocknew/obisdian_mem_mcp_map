@@ -305,11 +305,11 @@ export class MemorySearchView extends ItemView {
 					padding: 0;
 					position: relative;
 					overflow: hidden;
+					display: flex;
+					flex-direction: column;
 				}
 
 				.memory-search-tabs {
-					position: relative;
-					z-index: 10;
 					flex-shrink: 0;
 				}
 			}
