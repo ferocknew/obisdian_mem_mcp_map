@@ -515,6 +515,8 @@ export const chatViewStyles = `
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
+			/* 为 Obsidian 底部 UI 预留空间 */
+			padding-bottom: 60px;
 		}
 
 		/* 工具栏最小化 */
@@ -556,6 +558,7 @@ export const chatViewStyles = `
 		/* 输入区域最小化 */
 		.ai-chat-input-container {
 			padding: 4px 6px;
+			padding-bottom: 8px;
 			gap: 2px;
 			flex-shrink: 0;
 			border-top-width: 1px;
