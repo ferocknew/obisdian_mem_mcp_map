@@ -515,40 +515,39 @@ export const chatViewStyles = `
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
-			/* 限制最大高度，确保不超出视口（减少40px以适配窗口） */
-			max-height: calc(100vh - 130px);
-			/* 为 Obsidian 底部 UI 预留空间 */
-			padding-bottom: 10px;
+			/* 限制最大高度 */
+			max-height: calc(100vh - 90px);
 			overflow: hidden;
 		}
 
 		/* 工具栏最小化 */
 		.ai-chat-toolbar {
-			padding: 4px 6px;
+			padding: 2px 4px;
 			gap: 2px;
 			flex-shrink: 0;
+			min-height: 32px;
 		}
 
 		.ai-chat-title {
-			font-size: 13px;
-			max-width: 180px;
-			padding: 2px 6px;
+			font-size: 12px;
+			max-width: 160px;
+			padding: 2px 4px;
 		}
 
 		.ai-chat-toolbar-button {
-			width: 24px;
-			height: 24px;
+			width: 22px;
+			height: 22px;
 		}
 
 		.ai-chat-toolbar-button svg {
-			width: 14px;
-			height: 14px;
+			width: 13px;
+			height: 13px;
 		}
 
 		/* 消息区域：占据剩余空间 */
 		.ai-chat-messages {
-			padding: 8px;
-			gap: 6px;
+			padding: 6px;
+			gap: 4px;
 			flex: 1;
 			min-height: 0;
 			overflow-y: auto;
@@ -560,62 +559,63 @@ export const chatViewStyles = `
 
 		/* 输入区域最小化 */
 		.ai-chat-input-container {
-			padding: 4px 6px;
-			padding-bottom: 8px;
-			gap: 2px;
+			padding: 2px 4px;
+			padding-bottom: 4px;
+			gap: 1px;
 			flex-shrink: 0;
 			border-top-width: 1px;
+			max-height: 80px;
 		}
 
 		.ai-chat-input-toolbar {
-			gap: 3px;
-			padding: 2px 0;
+			gap: 2px;
+			padding: 1px 0;
 		}
 
 		.ai-chat-input-toolbar-button {
-			width: 26px;
-			height: 26px;
+			width: 24px;
+			height: 24px;
 		}
 
 		.ai-chat-input-toolbar-button svg {
-			width: 16px;
-			height: 16px;
+			width: 15px;
+			height: 15px;
 		}
 
 		.ai-chat-input-wrapper {
-			gap: 4px;
+			gap: 3px;
 		}
 
 		.ai-chat-input {
-			height: 32px;
-			padding: 0 8px;
+			height: 30px;
+			padding: 0 6px;
 			font-size: 14px;
 		}
 
 		.ai-chat-send-button {
-			height: 32px;
-			padding: 6px 12px;
-			font-size: 13px;
+			height: 30px;
+			padding: 5px 10px;
+			font-size: 12px;
 		}
 
 		.ai-chat-context-file-tag {
-			padding: 3px 6px;
-			font-size: 12px;
-			gap: 3px;
+			padding: 2px 4px;
+			font-size: 11px;
+			gap: 2px;
 		}
 
 		.ai-chat-context-file-name {
-			max-width: 140px;
+			max-width: 130px;
 		}
 
 		.ai-chat-context-file-close {
-			width: 14px;
-			height: 14px;
+			width: 13px;
+			height: 13px;
 		}
 
 		.ai-chat-context-file-close svg {
-			width: 12px;
-			height: 12px;
+			width: 11px;
+			height: 11px;
 		}
 	}
 `;
