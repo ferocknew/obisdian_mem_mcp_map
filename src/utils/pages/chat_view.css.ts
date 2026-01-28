@@ -515,8 +515,8 @@ export const chatViewStyles = `
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
-			/* 限制最大高度 */
-			max-height: calc(100vh - 90px);
+			/* 限制最大高度，确保不超出窗口 */
+			max-height: 702px;
 			overflow: hidden;
 		}
 
@@ -526,12 +526,14 @@ export const chatViewStyles = `
 			gap: 2px;
 			flex-shrink: 0;
 			min-height: 32px;
+			max-height: 32px;
 		}
 
 		.ai-chat-title {
 			font-size: 12px;
 			max-width: 160px;
 			padding: 2px 4px;
+			line-height: 1.2;
 		}
 
 		.ai-chat-toolbar-button {
@@ -557,14 +559,14 @@ export const chatViewStyles = `
 			max-width: 90%;
 		}
 
-		/* 输入区域最小化 */
+		/* 输入区域：固定在底部 */
 		.ai-chat-input-container {
 			padding: 2px 4px;
 			padding-bottom: 4px;
 			gap: 1px;
 			flex-shrink: 0;
 			border-top-width: 1px;
-			max-height: 80px;
+			max-height: 89px;
 		}
 
 		.ai-chat-input-toolbar {
