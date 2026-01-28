@@ -509,14 +509,17 @@ export const chatViewStyles = `
 
 	/* 移动端适配：优化键盘弹起时的布局 */
 	@media (max-width: 768px) {
-		/* 整个聊天容器：占据剩余空间 */
+		/* 整个聊天容器：限制在视口内 */
 		.ai-chat-container {
 			flex: 1;
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
+			/* 限制最大高度，确保不超出视口 */
+			max-height: calc(100vh - 90px);
 			/* 为 Obsidian 底部 UI 预留空间 */
-			padding-bottom: 60px;
+			padding-bottom: 50px;
+			overflow: hidden;
 		}
 
 		/* 工具栏最小化 */
