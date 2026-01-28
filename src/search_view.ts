@@ -212,12 +212,24 @@ export class MemorySearchView extends ItemView {
 			this.searchPageView.hide();
 			this.chatView.show();
 
-			// 调试信息
-			const containerDisplay = this.chatView.chatContainer.style.display;
-			const inputExists = !!this.chatView.chatInput;
-			const inputDisplay = this.chatView.chatInput?.style.display || 'unknown';
+			// 延迟获取尺寸信息，确保 DOM 已渲染
+			setTimeout(() => {
+				const input = this.chatView.chatInput;
+				const inputContainer = this.chatView.chatInputContainer;
 
-			new Notice(`切换到聊天\n容器: ${containerDisplay}\n输入框存在: ${inputExists}\n输入框: ${inputDisplay}`, 5000);
+				const debugInfo = [
+					`容器 display: ${this.chatView.chatContainer.style.display}`,
+					`输入框存在: ${!!input}`,
+					`输入框 display: ${input?.style.display || 'default'}`,
+					`输入框高度: ${input?.offsetHeight || 0}px`,
+					`输入框宽度: ${input?.offsetWidth || 0}px`,
+					`输入框可见: ${input?.offsetParent !== null}`,
+					`输入容器高度: ${inputContainer?.offsetHeight || 0}px`,
+					`输入容器 display: ${inputContainer?.style.display || 'default'}`,
+				];
+
+				new Notice(debugInfo.join('\n'), 8000);
+			}, 100);
 		} else {
 			// 显示搜索界面，隐藏AI聊天界面
 			this.searchPageView.show();
