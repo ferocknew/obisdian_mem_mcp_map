@@ -212,24 +212,37 @@ export class MemorySearchView extends ItemView {
 			this.searchPageView.hide();
 			this.chatView.show();
 
-			// 延迟获取尺寸信息，确保 DOM 已渲染
+			// 延迟获取位置信息，确保 DOM 已渲染
 			setTimeout(() => {
 				const input = this.chatView.chatInput;
 				const inputContainer = this.chatView.chatInputContainer;
+				const container = this.chatView.chatContainer;
+
+				const containerRect = container?.getBoundingClientRect();
+				const inputRect = input?.getBoundingClientRect();
+				const inputContainerRect = inputContainer?.getBoundingClientRect();
+
+				const windowHeight = window.innerHeight;
+				const windowWidth = window.innerWidth;
 
 				const debugInfo = [
-					`容器 display: ${this.chatView.chatContainer.style.display}`,
-					`输入框存在: ${!!input}`,
-					`输入框 display: ${input?.style.display || 'default'}`,
-					`输入框高度: ${input?.offsetHeight || 0}px`,
-					`输入框宽度: ${input?.offsetWidth || 0}px`,
-					`输入框可见: ${input?.offsetParent !== null}`,
-					`输入容器高度: ${inputContainer?.offsetHeight || 0}px`,
-					`输入容器 display: ${inputContainer?.style.display || 'default'}`,
+					`窗口: ${windowWidth}x${windowHeight}`,
+					`容器位置: top=${containerRect?.top.toFixed(0)}, bottom=${containerRect?.bottom.toFixed(0)}`,
+					`容器高度: ${containerRect?.height.toFixed(0)}px`,
+					`输入容器位置: top=${inputContainerRect?.top.toFixed(0)}, bottom=${inputContainerRect?.bottom.toFixed(0)}`,
+					`输入容器高度: ${inputContainerRect?.height.toFixed(0)}px`,
+					`输入框位置: top=${inputRect?.top.toFixed(0)}, bottom=${inputRect?.bottom.toFixed(0)}`,
+					`输入框高度: ${inputRect?.height.toFixed(0)}px`,
 				];
 
-				new Notice(debugInfo.join('\n'), 8000);
-			}, 100);
+				new Notice(debugInfo.join('\n'), 10000);
+
+				// 如果输入框在视口外，尝试滚动到它
+				if (input && inputRect && inputRect.bottom > windowHeight) {
+					new Notice('输入框在视口外，尝试滚动...', 3000);
+					input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+				}
+			}, 200);
 		} else {
 			// 显示搜索界面，隐藏AI聊天界面
 			this.searchPageView.show();
