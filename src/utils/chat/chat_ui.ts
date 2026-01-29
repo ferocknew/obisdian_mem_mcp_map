@@ -423,73 +423,40 @@ export class ChatUIManager {
 		if (!isMobile) return;
 
 		const input = this.ui.input;
-		const container = this.ui.container;
-		const originalContainerStyle = container.style.cssText;
+		const messagesContainer = this.ui.messagesContainer;
+		const originalScrollTop = { value: 0 };
 
-		// 监听输入框 focus 事件
+		// 保存当前滚动位置
 		input.addEventListener('focus', () => {
-			console.log('[Chat UI] 输入框获得焦点，调整移动端布局');
-			this.adjustForMobileKeyboard(true);
+			originalScrollTop.value = messagesContainer.scrollTop;
+			console.log('[Chat UI] 输入框获得焦点，保存滚动位置:', originalScrollTop.value);
+
+			// 滚动输入框到可见区域
+			setTimeout(() => {
+				input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}, 300);
 		});
 
-		// 监听输入框 blur 事件（键盘收起）
+		// 恢复滚动位置
 		input.addEventListener('blur', () => {
-			console.log('[Chat UI] 输入框失去焦点，恢复移动端布局');
-			this.restoreMobileLayout();
+			console.log('[Chat UI] 输入框失去焦点，恢复滚动位置');
+
+			// 延迟执行，等待键盘完全收起
+			setTimeout(() => {
+				messagesContainer.scrollTop = originalScrollTop.value;
+				console.log('[Chat UI] 恢复滚动位置到:', originalScrollTop.value);
+			}, 500);
 		});
 
-		// 监听窗口 resize 事件（键盘弹起会触发 resize）
+		// 监听窗口 resize 事件（键盘弹起/收起）
 		window.addEventListener('resize', () => {
 			if (document.activeElement === input) {
-				this.adjustForMobileKeyboard(true);
-			} else if (!document.activeElement) {
-				// 没有元素获得焦点，恢复布局
-				this.restoreMobileLayout();
+				// 键盘弹起时，确保输入框可见
+				setTimeout(() => {
+					input.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+				}, 100);
 			}
 		});
-
-		// 监听可视化视口变化（更准确的键盘检测）
-		if ('visualViewport' in window) {
-			window.visualViewport!.addEventListener('resize', () => {
-				if (document.activeElement === input) {
-					this.adjustForMobileKeyboard(true);
-				}
-			});
-		}
-	}
-
-	/**
-	 * 调整布局以适应移动端键盘
-	 */
-	private adjustForMobileKeyboard(isKeyboardOpen: boolean): void {
-		const input = this.ui.input;
-		const inputContainer = this.ui.inputContainer;
-		const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-		console.log('[Chat UI] 调整移动端键盘布局，视口高度:', viewportHeight);
-
-		// 使用 scrollTo 确保输入框可见
-		setTimeout(() => {
-			input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-		}, 300);
-	}
-
-	/**
-	 * 恢复移动端布局（键盘收起时）
-	 */
-	private restoreMobileLayout(): void {
-		console.log('[Chat UI] 恢复移动端布局');
-
-		// 延迟执行，等待键盘完全收起
-		setTimeout(() => {
-			// 清除可能设置的内联样式
-			if (this.ui.container) {
-				this.ui.container.style.height = '';
-			}
-
-			// 滚动到消息区域底部
-			this.scrollToBottom();
-		}, 300);
 	}
 
 	/**
