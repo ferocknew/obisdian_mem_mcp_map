@@ -3752,6 +3752,7 @@ var _ChatUIManager = class _ChatUIManager {
       new Notice10(`\u521D\u59CB\u7A97\u53E3\u9AD8\u5EA6: ${innerHeight}`);
       window.addEventListener("resize", () => {
         const newInnerHeight = window.innerHeight;
+        new Notice10(`[Android] resize \u4E8B\u4EF6: ${newInnerHeight}`);
         if (innerHeight > newInnerHeight) {
           new Notice10(`[Android] \u952E\u76D8\u5F39\u8D77 (${newInnerHeight} < ${innerHeight})`);
           state.keyboardOpen = true;

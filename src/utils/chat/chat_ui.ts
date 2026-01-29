@@ -460,6 +460,7 @@ export class ChatUIManager {
 
 			window.addEventListener('resize', () => {
 				const newInnerHeight = window.innerHeight;
+				new Notice(`[Android] resize 事件: ${newInnerHeight}`);
 
 				if (innerHeight > newInnerHeight) {
 					// 键盘弹起
