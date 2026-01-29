@@ -424,43 +424,54 @@ export class ChatUIManager {
 
 		if (!isMobile) return;
 
-		// 检查是否支持 visualViewport
-		if (!('visualViewport' in window)) {
-			new Notice('不支持 visualViewport，无法处理键盘');
-			return;
-		}
-
 		const input = this.ui.input;
 		const container = this.ui.container;
-		const originalHeight = { value: container.style.maxHeight || '' };
+		const state = {
+			keyboardOpen: false,
+			originalHeight: '575px'
+		};
 
-		let keyboardOpen = false;
-		let checkTimer: number | null = null;
+		const userAgent = navigator.userAgent.toLowerCase();
+		const isIOS = /iphone|ipad|ipod/.test(userAgent);
 
-		// 监听 visualViewport 变化
-		window.visualViewport!.addEventListener('resize', () => {
-			const viewportHeight = window.visualViewport!.height;
-			const windowHeight = window.innerHeight;
-			const diff = windowHeight - viewportHeight;
-			const isOpening = diff > 150; // 视口减小超过150px认为键盘弹起
-			const isClosing = Math.abs(diff) < 50; // 视口恢复到接近原始高度认为键盘收起
+		new Notice(`移动端: ${isIOS ? 'iOS' : 'Android'}`);
 
-			new Notice(`视口: ${viewportHeight}, 差值: ${diff}, 键盘: ${isOpening ? '打开' : isClosing ? '关闭' : '无变化'}`, 3000);
+		if (isIOS) {
+			// iOS: 使用 focusin 和 focusout 事件
+			new Notice('使用 iOS 键盘检测');
 
-			// 键盘弹起
-			if (isOpening && !keyboardOpen) {
-				keyboardOpen = true;
-				new Notice('键盘弹起');
-				// 暂时不做任何处理，先观察
-			}
+			window.addEventListener('focusin', () => {
+				new Notice('[iOS] focusin - 键盘弹起');
+				state.keyboardOpen = true;
+				// 暂时不做处理
+			});
 
-			// 键盘收起
-			if (isClosing && keyboardOpen) {
-				keyboardOpen = false;
-				new Notice('键盘收起');
-				// 暂时不做任何处理，先观察
-			}
-		});
+			window.addEventListener('focusout', () => {
+				new Notice('[iOS] focusout - 键盘收起');
+				state.keyboardOpen = false;
+				// 暂时不做处理
+			});
+		} else {
+			// Android: 使用 resize 事件
+			new Notice('使用 Android 键盘检测');
+
+			const innerHeight = window.innerHeight;
+			new Notice(`初始窗口高度: ${innerHeight}`);
+
+			window.addEventListener('resize', () => {
+				const newInnerHeight = window.innerHeight;
+
+				if (innerHeight > newInnerHeight) {
+					// 键盘弹起
+					new Notice(`[Android] 键盘弹起 (${newInnerHeight} < ${innerHeight})`);
+					state.keyboardOpen = true;
+				} else {
+					// 键盘收起
+					new Notice(`[Android] 键盘收起 (${newInnerHeight} >= ${innerHeight})`);
+					state.keyboardOpen = false;
+				}
+			});
+		}
 
 		new Notice('移动端键盘监听已启动');
 	}

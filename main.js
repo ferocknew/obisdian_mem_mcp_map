@@ -3727,31 +3727,40 @@ var _ChatUIManager = class _ChatUIManager {
     const { Notice: Notice10 } = require("obsidian");
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
-    if (!("visualViewport" in window)) {
-      new Notice10("\u4E0D\u652F\u6301 visualViewport\uFF0C\u65E0\u6CD5\u5904\u7406\u952E\u76D8");
-      return;
-    }
     const input = this.ui.input;
     const container = this.ui.container;
-    const originalHeight = { value: container.style.maxHeight || "" };
-    let keyboardOpen = false;
-    let checkTimer = null;
-    window.visualViewport.addEventListener("resize", () => {
-      const viewportHeight = window.visualViewport.height;
-      const windowHeight = window.innerHeight;
-      const diff = windowHeight - viewportHeight;
-      const isOpening = diff > 150;
-      const isClosing = Math.abs(diff) < 50;
-      new Notice10(`\u89C6\u53E3: ${viewportHeight}, \u5DEE\u503C: ${diff}, \u952E\u76D8: ${isOpening ? "\u6253\u5F00" : isClosing ? "\u5173\u95ED" : "\u65E0\u53D8\u5316"}`, 3e3);
-      if (isOpening && !keyboardOpen) {
-        keyboardOpen = true;
-        new Notice10("\u952E\u76D8\u5F39\u8D77");
-      }
-      if (isClosing && keyboardOpen) {
-        keyboardOpen = false;
-        new Notice10("\u952E\u76D8\u6536\u8D77");
-      }
-    });
+    const state = {
+      keyboardOpen: false,
+      originalHeight: "575px"
+    };
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+    new Notice10(`\u79FB\u52A8\u7AEF: ${isIOS ? "iOS" : "Android"}`);
+    if (isIOS) {
+      new Notice10("\u4F7F\u7528 iOS \u952E\u76D8\u68C0\u6D4B");
+      window.addEventListener("focusin", () => {
+        new Notice10("[iOS] focusin - \u952E\u76D8\u5F39\u8D77");
+        state.keyboardOpen = true;
+      });
+      window.addEventListener("focusout", () => {
+        new Notice10("[iOS] focusout - \u952E\u76D8\u6536\u8D77");
+        state.keyboardOpen = false;
+      });
+    } else {
+      new Notice10("\u4F7F\u7528 Android \u952E\u76D8\u68C0\u6D4B");
+      const innerHeight = window.innerHeight;
+      new Notice10(`\u521D\u59CB\u7A97\u53E3\u9AD8\u5EA6: ${innerHeight}`);
+      window.addEventListener("resize", () => {
+        const newInnerHeight = window.innerHeight;
+        if (innerHeight > newInnerHeight) {
+          new Notice10(`[Android] \u952E\u76D8\u5F39\u8D77 (${newInnerHeight} < ${innerHeight})`);
+          state.keyboardOpen = true;
+        } else {
+          new Notice10(`[Android] \u952E\u76D8\u6536\u8D77 (${newInnerHeight} >= ${innerHeight})`);
+          state.keyboardOpen = false;
+        }
+      });
+    }
     new Notice10("\u79FB\u52A8\u7AEF\u952E\u76D8\u76D1\u542C\u5DF2\u542F\u52A8");
   }
   /**
