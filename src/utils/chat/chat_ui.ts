@@ -424,17 +424,27 @@ export class ChatUIManager {
 
 		const input = this.ui.input;
 		const container = this.ui.container;
+		const originalContainerStyle = container.style.cssText;
 
 		// 监听输入框 focus 事件
 		input.addEventListener('focus', () => {
 			console.log('[Chat UI] 输入框获得焦点，调整移动端布局');
-			this.adjustForMobileKeyboard();
+			this.adjustForMobileKeyboard(true);
+		});
+
+		// 监听输入框 blur 事件（键盘收起）
+		input.addEventListener('blur', () => {
+			console.log('[Chat UI] 输入框失去焦点，恢复移动端布局');
+			this.restoreMobileLayout();
 		});
 
 		// 监听窗口 resize 事件（键盘弹起会触发 resize）
 		window.addEventListener('resize', () => {
 			if (document.activeElement === input) {
-				this.adjustForMobileKeyboard();
+				this.adjustForMobileKeyboard(true);
+			} else if (!document.activeElement) {
+				// 没有元素获得焦点，恢复布局
+				this.restoreMobileLayout();
 			}
 		});
 
@@ -442,7 +452,7 @@ export class ChatUIManager {
 		if ('visualViewport' in window) {
 			window.visualViewport!.addEventListener('resize', () => {
 				if (document.activeElement === input) {
-					this.adjustForMobileKeyboard();
+					this.adjustForMobileKeyboard(true);
 				}
 			});
 		}
@@ -451,22 +461,34 @@ export class ChatUIManager {
 	/**
 	 * 调整布局以适应移动端键盘
 	 */
-	private adjustForMobileKeyboard(): void {
+	private adjustForMobileKeyboard(isKeyboardOpen: boolean): void {
 		const input = this.ui.input;
 		const inputContainer = this.ui.inputContainer;
 		const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 
 		console.log('[Chat UI] 调整移动端键盘布局，视口高度:', viewportHeight);
 
-		// 计算输入框应该距离底部的位置
 		// 使用 scrollTo 确保输入框可见
 		setTimeout(() => {
 			input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 300);
+	}
 
-			// 设置容器高度以匹配当前视口
+	/**
+	 * 恢复移动端布局（键盘收起时）
+	 */
+	private restoreMobileLayout(): void {
+		console.log('[Chat UI] 恢复移动端布局');
+
+		// 延迟执行，等待键盘完全收起
+		setTimeout(() => {
+			// 清除可能设置的内联样式
 			if (this.ui.container) {
-				this.ui.container.style.height = `${viewportHeight}px`;
+				this.ui.container.style.height = '';
 			}
+
+			// 滚动到消息区域底部
+			this.scrollToBottom();
 		}, 300);
 	}
 
