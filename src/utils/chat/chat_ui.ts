@@ -423,21 +423,34 @@ export class ChatUIManager {
 		if (!isMobile) return;
 
 		const input = this.ui.input;
-		const messagesContainer = this.ui.messagesContainer;
+		const container = this.ui.container;
 		const state = {
-			isKeyboardOpen: false,
-			savedScrollTop: 0
+			originalMaxHeight: '',
+			isKeyboardOpen: false
 		};
 
 		// 输入框获得焦点
 		input.addEventListener('focus', () => {
 			console.log('[Chat UI] 输入框获得焦点');
 			state.isKeyboardOpen = true;
-			state.savedScrollTop = messagesContainer.scrollTop;
 
-			// 滚动到消息区域底部，这样输入框就可见了
+			// 保存原始 max-height
+			state.originalMaxHeight = container.style.maxHeight || '';
+
+			// 键盘弹起时，减小容器高度，为键盘留出空间
+			// 这样整个容器会向下移动，输入框就会可见
 			setTimeout(() => {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+				const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+				const keyboardHeight = window.innerHeight - viewportHeight;
+
+				console.log('[Chat UI] 键盘高度:', keyboardHeight, '视口高度:', viewportHeight);
+
+				if (keyboardHeight > 100) {
+					// 有键盘弹起，调整容器高度
+					const newMaxHeight = Math.max(400, 570 - keyboardHeight / 2);
+					container.style.maxHeight = `${newMaxHeight}px`;
+					console.log('[Chat UI] 调整容器高度到:', newMaxHeight);
+				}
 			}, 300);
 		});
 
@@ -446,25 +459,24 @@ export class ChatUIManager {
 			console.log('[Chat UI] 输入框失去焦点');
 			state.isKeyboardOpen = false;
 
-			// 等待键盘完全收起后恢复滚动位置
+			// 恢复原始容器高度
 			setTimeout(() => {
-				messagesContainer.scrollTop = state.savedScrollTop;
+				container.style.maxHeight = state.originalMaxHeight || '570px';
+				console.log('[Chat UI] 恢复容器高度');
 			}, 500);
 		});
 
-		// 监听 visualViewport 变化（更准确的键盘状态检测）
+		// 监听 visualViewport 变化
 		if ('visualViewport' in window) {
 			window.visualViewport!.addEventListener('resize', () => {
-				const currentHeight = window.visualViewport!.height;
-				const isSmallViewport = currentHeight < window.innerHeight * 0.8;
+				if (state.isKeyboardOpen) {
+					const viewportHeight = window.visualViewport!.height;
+					const keyboardHeight = window.innerHeight - viewportHeight;
 
-				console.log('[Chat UI] 视口高度变化:', currentHeight, '是否小屏:', isSmallViewport);
-
-				if (isSmallViewport && state.isKeyboardOpen) {
-					// 键盘弹起，确保输入框可见
-					setTimeout(() => {
-						messagesContainer.scrollTop = messagesContainer.scrollHeight;
-					}, 100);
+					if (keyboardHeight > 100) {
+						const newMaxHeight = Math.max(400, 570 - keyboardHeight / 2);
+						container.style.maxHeight = `${newMaxHeight}px`;
+					}
 				}
 			});
 		}
