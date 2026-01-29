@@ -422,51 +422,47 @@ export class ChatUIManager {
 		// 检测是否为移动设备
 		const isMobile = window.innerWidth <= 768;
 
-		if (!isMobile) {
-			new Notice('不是移动设备，跳过键盘处理');
+		if (!isMobile) return;
+
+		// 检查是否支持 visualViewport
+		if (!('visualViewport' in window)) {
+			new Notice('不支持 visualViewport，无法处理键盘');
 			return;
 		}
 
 		const input = this.ui.input;
 		const container = this.ui.container;
+		const originalHeight = { value: container.style.maxHeight || '' };
 
-		new Notice('移动端：开始设置键盘监听');
+		let keyboardOpen = false;
+		let checkTimer: number | null = null;
 
-		// 输入框获得焦点
-		input.addEventListener('focus', () => {
-			new Notice('[FOCUS] 输入框获得焦点');
-			new Notice(`窗口高度: ${window.innerHeight}`, 3000);
+		// 监听 visualViewport 变化
+		window.visualViewport!.addEventListener('resize', () => {
+			const viewportHeight = window.visualViewport!.height;
+			const windowHeight = window.innerHeight;
+			const diff = windowHeight - viewportHeight;
+			const isOpening = diff > 150; // 视口减小超过150px认为键盘弹起
+			const isClosing = Math.abs(diff) < 50; // 视口恢复到接近原始高度认为键盘收起
 
-			// 检查 visualViewport
-			if ('visualViewport' in window) {
-				new Notice(`视口高度: ${window.visualViewport!.height}`, 3000);
+			new Notice(`视口: ${viewportHeight}, 差值: ${diff}, 键盘: ${isOpening ? '打开' : isClosing ? '关闭' : '无变化'}`, 3000);
+
+			// 键盘弹起
+			if (isOpening && !keyboardOpen) {
+				keyboardOpen = true;
+				new Notice('键盘弹起');
+				// 暂时不做任何处理，先观察
+			}
+
+			// 键盘收起
+			if (isClosing && keyboardOpen) {
+				keyboardOpen = false;
+				new Notice('键盘收起');
+				// 暂时不做任何处理，先观察
 			}
 		});
 
-		// 输入框失去焦点
-		input.addEventListener('blur', () => {
-			new Notice('[BLUR] 输入框失去焦点');
-		});
-
-		// 监听 visualViewport 变化
-		if ('visualViewport' in window) {
-			new Notice('支持 visualViewport');
-
-			window.visualViewport!.addEventListener('resize', () => {
-				const vh = window.visualViewport!.height;
-				const wh = window.innerHeight;
-				const diff = wh - vh;
-
-				new Notice(`视口变化: ${vh}, 差值: ${diff}`, 2000);
-			});
-		} else {
-			new Notice('不支持 visualViewport');
-		}
-
-		// 监听窗口 resize
-		window.addEventListener('resize', () => {
-			new Notice(`窗口 resize: ${window.innerHeight}x${window.innerWidth}`, 2000);
-		});
+		new Notice('移动端键盘监听已启动');
 	}
 
 	/**
