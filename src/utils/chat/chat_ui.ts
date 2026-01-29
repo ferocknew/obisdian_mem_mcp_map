@@ -424,39 +424,50 @@ export class ChatUIManager {
 
 		const input = this.ui.input;
 		const messagesContainer = this.ui.messagesContainer;
-		const originalScrollTop = { value: 0 };
+		const state = {
+			isKeyboardOpen: false,
+			savedScrollTop: 0
+		};
 
-		// 保存当前滚动位置
+		// 输入框获得焦点
 		input.addEventListener('focus', () => {
-			originalScrollTop.value = messagesContainer.scrollTop;
-			console.log('[Chat UI] 输入框获得焦点，保存滚动位置:', originalScrollTop.value);
+			console.log('[Chat UI] 输入框获得焦点');
+			state.isKeyboardOpen = true;
+			state.savedScrollTop = messagesContainer.scrollTop;
 
-			// 滚动输入框到可见区域
+			// 滚动到消息区域底部，这样输入框就可见了
 			setTimeout(() => {
-				input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
 			}, 300);
 		});
 
-		// 恢复滚动位置
+		// 输入框失去焦点
 		input.addEventListener('blur', () => {
-			console.log('[Chat UI] 输入框失去焦点，恢复滚动位置');
+			console.log('[Chat UI] 输入框失去焦点');
+			state.isKeyboardOpen = false;
 
-			// 延迟执行，等待键盘完全收起
+			// 等待键盘完全收起后恢复滚动位置
 			setTimeout(() => {
-				messagesContainer.scrollTop = originalScrollTop.value;
-				console.log('[Chat UI] 恢复滚动位置到:', originalScrollTop.value);
+				messagesContainer.scrollTop = state.savedScrollTop;
 			}, 500);
 		});
 
-		// 监听窗口 resize 事件（键盘弹起/收起）
-		window.addEventListener('resize', () => {
-			if (document.activeElement === input) {
-				// 键盘弹起时，确保输入框可见
-				setTimeout(() => {
-					input.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-				}, 100);
-			}
-		});
+		// 监听 visualViewport 变化（更准确的键盘状态检测）
+		if ('visualViewport' in window) {
+			window.visualViewport!.addEventListener('resize', () => {
+				const currentHeight = window.visualViewport!.height;
+				const isSmallViewport = currentHeight < window.innerHeight * 0.8;
+
+				console.log('[Chat UI] 视口高度变化:', currentHeight, '是否小屏:', isSmallViewport);
+
+				if (isSmallViewport && state.isKeyboardOpen) {
+					// 键盘弹起，确保输入框可见
+					setTimeout(() => {
+						messagesContainer.scrollTop = messagesContainer.scrollHeight;
+					}, 100);
+				}
+			});
+		}
 	}
 
 	/**
