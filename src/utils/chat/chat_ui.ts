@@ -417,69 +417,56 @@ export class ChatUIManager {
 	 * 在移动端，当键盘弹起时，调整输入区域使其紧贴键盘
 	 */
 	private setupMobileKeyboardHandling(): void {
+		const { Notice } = require('obsidian');
+
 		// 检测是否为移动设备
 		const isMobile = window.innerWidth <= 768;
 
-		if (!isMobile) return;
+		if (!isMobile) {
+			new Notice('不是移动设备，跳过键盘处理');
+			return;
+		}
 
 		const input = this.ui.input;
 		const container = this.ui.container;
-		const state = {
-			originalMaxHeight: '',
-			isKeyboardOpen: false
-		};
+
+		new Notice('移动端：开始设置键盘监听');
 
 		// 输入框获得焦点
 		input.addEventListener('focus', () => {
-			console.log('[Chat UI] 输入框获得焦点');
-			state.isKeyboardOpen = true;
+			new Notice('[FOCUS] 输入框获得焦点');
+			new Notice(`窗口高度: ${window.innerHeight}`, 3000);
 
-			// 保存原始 max-height
-			state.originalMaxHeight = container.style.maxHeight || '';
-
-			// 键盘弹起时，减小容器高度，为键盘留出空间
-			// 这样整个容器会向下移动，输入框就会可见
-			setTimeout(() => {
-				const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-				const keyboardHeight = window.innerHeight - viewportHeight;
-
-				console.log('[Chat UI] 键盘高度:', keyboardHeight, '视口高度:', viewportHeight);
-
-				if (keyboardHeight > 100) {
-					// 有键盘弹起，调整容器高度
-					const newMaxHeight = Math.max(400, 570 - keyboardHeight / 2);
-					container.style.maxHeight = `${newMaxHeight}px`;
-					console.log('[Chat UI] 调整容器高度到:', newMaxHeight);
-				}
-			}, 300);
+			// 检查 visualViewport
+			if ('visualViewport' in window) {
+				new Notice(`视口高度: ${window.visualViewport!.height}`, 3000);
+			}
 		});
 
 		// 输入框失去焦点
 		input.addEventListener('blur', () => {
-			console.log('[Chat UI] 输入框失去焦点');
-			state.isKeyboardOpen = false;
-
-			// 恢复原始容器高度
-			setTimeout(() => {
-				container.style.maxHeight = state.originalMaxHeight || '570px';
-				console.log('[Chat UI] 恢复容器高度');
-			}, 500);
+			new Notice('[BLUR] 输入框失去焦点');
 		});
 
 		// 监听 visualViewport 变化
 		if ('visualViewport' in window) {
-			window.visualViewport!.addEventListener('resize', () => {
-				if (state.isKeyboardOpen) {
-					const viewportHeight = window.visualViewport!.height;
-					const keyboardHeight = window.innerHeight - viewportHeight;
+			new Notice('支持 visualViewport');
 
-					if (keyboardHeight > 100) {
-						const newMaxHeight = Math.max(400, 570 - keyboardHeight / 2);
-						container.style.maxHeight = `${newMaxHeight}px`;
-					}
-				}
+			window.visualViewport!.addEventListener('resize', () => {
+				const vh = window.visualViewport!.height;
+				const wh = window.innerHeight;
+				const diff = wh - vh;
+
+				new Notice(`视口变化: ${vh}, 差值: ${diff}`, 2000);
 			});
+		} else {
+			new Notice('不支持 visualViewport');
 		}
+
+		// 监听窗口 resize
+		window.addEventListener('resize', () => {
+			new Notice(`窗口 resize: ${window.innerHeight}x${window.innerWidth}`, 2000);
+		});
 	}
 
 	/**

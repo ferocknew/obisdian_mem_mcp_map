@@ -516,7 +516,7 @@ export const chatViewStyles = `
 			flex-direction: column;
 			min-height: 0;
 			/* 限制最大高度，为 Obsidian 底部工具栏预留足够空间 */
-			max-height: 570px;
+			max-height: 575px;
 			overflow: hidden;
 		}
 
