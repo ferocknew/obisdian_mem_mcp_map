@@ -3302,6 +3302,8 @@ var chatViewStyles = `
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
+			/* \u9650\u5236\u6700\u5927\u9AD8\u5EA6\uFF0C\u4E3A\u952E\u76D8\u9884\u7559\u7A7A\u95F4 */
+			max-height: 575px;
 		}
 
 		.ai-chat-toolbar {

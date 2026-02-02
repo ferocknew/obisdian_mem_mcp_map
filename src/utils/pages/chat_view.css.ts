@@ -514,6 +514,8 @@ export const chatViewStyles = `
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
+			/* 限制最大高度，为键盘预留空间 */
+			max-height: 575px;
 		}
 
 		.ai-chat-toolbar {
