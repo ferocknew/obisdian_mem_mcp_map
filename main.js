@@ -3730,29 +3730,37 @@ var _ChatUIManager = class _ChatUIManager {
     const input = this.ui.input;
     const container = this.ui.container;
     const initialClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-    new Notice10(`\u521D\u59CB clientHeight: ${initialClientHeight}`);
+    new Notice10(`\u521D\u59CB clientHeight: ${initialClientHeight}`, 5e3);
     let lastClientHeight = initialClientHeight;
+    let checkCount = 0;
     let keyboardOpen = false;
     setInterval(() => {
+      checkCount++;
       const currentClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-      const diff = Math.abs(currentClientHeight - lastClientHeight);
-      if (diff > 100) {
-        new Notice10(`clientHeight \u53D8\u5316: ${lastClientHeight} -> ${currentClientHeight} (\u5DEE\u503C: ${diff})`, 2e3);
-        if (currentClientHeight < lastClientHeight) {
+      const diff = currentClientHeight - lastClientHeight;
+      if (checkCount % 10 === 0) {
+        new Notice10(`\u68C0\u67E5 #${checkCount}: clientHeight=${currentClientHeight}, \u5DEE\u503C=${diff.toFixed(0)}`, 2e3);
+      }
+      if (Math.abs(diff) > 50) {
+        new Notice10(`*** \u68C0\u6D4B\u5230\u53D8\u5316 ***
+\u4ECE: ${lastClientHeight}
+\u5230: ${currentClientHeight}
+\u5DEE\u503C: ${diff.toFixed(0)}`, 4e3);
+        if (diff < 0) {
           if (!keyboardOpen) {
             keyboardOpen = true;
-            new Notice10("\u952E\u76D8\u5F39\u8D77");
+            new Notice10(">>> \u952E\u76D8\u5F39\u8D77 <<<", 3e3);
           }
         } else {
           if (keyboardOpen) {
             keyboardOpen = false;
-            new Notice10("\u952E\u76D8\u6536\u8D77");
+            new Notice10(">>> \u952E\u76D8\u6536\u8D77 <<<", 3e3);
           }
         }
         lastClientHeight = currentClientHeight;
       }
     }, 500);
-    new Notice10("\u79FB\u52A8\u7AEF\u952E\u76D8\u76D1\u542C\u5DF2\u542F\u52A8\uFF08clientHeight \u8F6E\u8BE2\uFF09");
+    new Notice10("\u79FB\u52A8\u7AEF\u952E\u76D8\u76D1\u542C\u5DF2\u542F\u52A8\n\u6BCF 5 \u79D2\u663E\u793A\u4E00\u6B21\u72B6\u6001", 4e3);
   }
   /**
    * 获取样式

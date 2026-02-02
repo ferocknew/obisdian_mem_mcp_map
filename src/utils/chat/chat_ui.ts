@@ -427,33 +427,40 @@ export class ChatUIManager {
 		const input = this.ui.input;
 		const container = this.ui.container;
 
-		// 使用 document.documentElement.clientHeight（文章推荐的方法）
+		// 使用 document.documentElement.clientHeight
 		const initialClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-		new Notice(`初始 clientHeight: ${initialClientHeight}`);
+		new Notice(`初始 clientHeight: ${initialClientHeight}`, 5000);
 
 		let lastClientHeight = initialClientHeight;
+		let checkCount = 0;
 		let keyboardOpen = false;
 
-		// 使用定时器轮询（因为 resize 事件在 Obsidian Mobile 中不触发）
+		// 使用定时器轮询
 		setInterval(() => {
+			checkCount++;
 			const currentClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-			const diff = Math.abs(currentClientHeight - lastClientHeight);
+			const diff = currentClientHeight - lastClientHeight;
 
-			// 高度变化超过 100px 才认为是键盘状态变化
-			if (diff > 100) {
-				new Notice(`clientHeight 变化: ${lastClientHeight} -> ${currentClientHeight} (差值: ${diff})`, 2000);
+			// 每 10 次检查显示一次当前状态（每 5 秒）
+			if (checkCount % 10 === 0) {
+				new Notice(`检查 #${checkCount}: clientHeight=${currentClientHeight}, 差值=${diff.toFixed(0)}`, 2000);
+			}
 
-				if (currentClientHeight < lastClientHeight) {
-					// 键盘弹起
+			// 高度变化超过 50px 就认为是键盘状态变化
+			if (Math.abs(diff) > 50) {
+				new Notice(`*** 检测到变化 ***\n从: ${lastClientHeight}\n到: ${currentClientHeight}\n差值: ${diff.toFixed(0)}`, 4000);
+
+				if (diff < 0) {
+					// 高度减小 → 键盘弹起
 					if (!keyboardOpen) {
 						keyboardOpen = true;
-						new Notice('键盘弹起');
+						new Notice('>>> 键盘弹起 <<<', 3000);
 					}
 				} else {
-					// 键盘收起
+					// 高度增加 → 键盘收起
 					if (keyboardOpen) {
 						keyboardOpen = false;
-						new Notice('键盘收起');
+						new Notice('>>> 键盘收起 <<<', 3000);
 					}
 				}
 
@@ -461,7 +468,7 @@ export class ChatUIManager {
 			}
 		}, 500); // 每 500ms 检查一次
 
-		new Notice('移动端键盘监听已启动（clientHeight 轮询）');
+		new Notice('移动端键盘监听已启动\n每 5 秒显示一次状态', 4000);
 	}
 
 	/**
