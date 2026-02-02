@@ -3295,117 +3295,140 @@ var chatViewStyles = `
 		}
 	}
 
-	/* \u79FB\u52A8\u7AEF\u9002\u914D\uFF1A\u4F18\u5316\u952E\u76D8\u5F39\u8D77\u65F6\u7684\u5E03\u5C40 */
+	/* \u79FB\u52A8\u7AEF\u9002\u914D */
 	@media (max-width: 768px) {
-		/* \u6574\u4E2A\u804A\u5929\u5BB9\u5668\uFF1A\u9650\u5236\u5728\u89C6\u53E3\u5185 */
 		.ai-chat-container {
 			flex: 1;
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
-			/* \u9650\u5236\u6700\u5927\u9AD8\u5EA6\uFF0C\u4E3A\u952E\u76D8\u548C Obsidian \u5E95\u90E8\u5DE5\u5177\u680F\u9884\u7559\u8DB3\u591F\u7A7A\u95F4 */
-			max-height: 500px;
-			overflow: hidden;
 		}
 
-		/* \u5DE5\u5177\u680F\u6700\u5C0F\u5316 */
 		.ai-chat-toolbar {
-			padding: 2px 4px;
-			gap: 2px;
+			padding: 8px 12px;
+			gap: 4px;
 			flex-shrink: 0;
-			min-height: 32px;
-			max-height: 32px;
 		}
 
 		.ai-chat-title {
-			font-size: 12px;
-			max-width: 160px;
-			padding: 2px 4px;
-			line-height: 1.2;
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--text-normal);
+			cursor: pointer;
+			padding: 4px 8px;
+			border-radius: 3px;
+			transition: all 0.15s ease;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 300px;
 		}
 
 		.ai-chat-toolbar-button {
-			width: 22px;
-			height: 22px;
+			width: 28px;
+			height: 28px;
+			padding: 0;
+			border: none;
+			border-radius: 3px;
+			background: transparent;
+			color: var(--text-muted);
+			cursor: pointer;
+			transition: all 0.15s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 0.7;
 		}
 
 		.ai-chat-toolbar-button svg {
-			width: 13px;
-			height: 13px;
+			width: 16px;
+			height: 16px;
 		}
 
-		/* \u6D88\u606F\u533A\u57DF\uFF1A\u5360\u636E\u5269\u4F59\u7A7A\u95F4 */
 		.ai-chat-messages {
-			padding: 6px;
-			gap: 4px;
 			flex: 1;
-			min-height: 0;
 			overflow-y: auto;
+			padding: 15px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
 		}
 
 		.ai-chat-message {
-			max-width: 90%;
+			max-width: 85%;
 		}
 
-		/* \u8F93\u5165\u533A\u57DF\uFF1A\u56FA\u5B9A\u5728\u5E95\u90E8 */
 		.ai-chat-input-container {
-			padding: 2px 4px;
-			padding-bottom: 4px;
-			gap: 1px;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			padding: 12px;
+			border-top: 1px solid var(--background-modifier-border);
+			background: var(--background-primary);
 			flex-shrink: 0;
-			border-top-width: 1px;
-			max-height: 89px;
 		}
 
 		.ai-chat-input-toolbar {
-			gap: 2px;
-			padding: 1px 0;
+			display: flex;
+			gap: 6px;
+			align-items: center;
+			padding: 4px 0;
 		}
 
 		.ai-chat-input-toolbar-button {
-			width: 24px;
-			height: 24px;
+			width: 32px;
+			height: 32px;
+			padding: 0;
+			border: 1px solid transparent;
+			border-radius: 6px;
+			background: transparent;
+			color: var(--text-muted);
+			cursor: pointer;
+			transition: all 0.2s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 
 		.ai-chat-input-toolbar-button svg {
-			width: 15px;
-			height: 15px;
+			width: 18px;
+			height: 18px;
 		}
 
 		.ai-chat-input-wrapper {
-			gap: 3px;
+			display: flex;
+			gap: 8px;
+			align-items: center;
 		}
 
 		.ai-chat-input {
-			height: 30px;
-			padding: 0 6px;
+			flex: 1;
+			height: 40px;
+			padding: 0 12px;
+			border: 1px solid var(--background-modifier-border);
+			border-radius: 6px;
+			background: var(--background-primary);
+			color: var(--text-normal);
 			font-size: 14px;
+			font-family: inherit;
+		}
+
+		.ai-chat-input:focus {
+			outline: none;
+			border-color: var(--interactive-accent);
 		}
 
 		.ai-chat-send-button {
-			height: 30px;
-			padding: 5px 10px;
-			font-size: 12px;
-		}
-
-		.ai-chat-context-file-tag {
-			padding: 2px 4px;
-			font-size: 11px;
-			gap: 2px;
-		}
-
-		.ai-chat-context-file-name {
-			max-width: 130px;
-		}
-
-		.ai-chat-context-file-close {
-			width: 13px;
-			height: 13px;
-		}
-
-		.ai-chat-context-file-close svg {
-			width: 11px;
-			height: 11px;
+			padding: 10px 24px;
+			height: 40px;
+			border: none;
+			border-radius: 6px;
+			background: var(--interactive-accent);
+			color: var(--text-on-accent);
+			font-size: 14px;
+			font-weight: 500;
+			cursor: pointer;
+			transition: all 0.2s;
 		}
 	}
 `;

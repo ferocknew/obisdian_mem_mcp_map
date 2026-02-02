@@ -507,117 +507,140 @@ export const chatViewStyles = `
 		}
 	}
 
-	/* 移动端适配：优化键盘弹起时的布局 */
+	/* 移动端适配 */
 	@media (max-width: 768px) {
-		/* 整个聊天容器：限制在视口内 */
 		.ai-chat-container {
 			flex: 1;
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
-			/* 限制最大高度，为键盘和 Obsidian 底部工具栏预留足够空间 */
-			max-height: 575px;
-			overflow: hidden;
 		}
 
-		/* 工具栏最小化 */
 		.ai-chat-toolbar {
-			padding: 2px 4px;
-			gap: 2px;
+			padding: 8px 12px;
+			gap: 4px;
 			flex-shrink: 0;
-			min-height: 32px;
-			max-height: 32px;
 		}
 
 		.ai-chat-title {
-			font-size: 12px;
-			max-width: 160px;
-			padding: 2px 4px;
-			line-height: 1.2;
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--text-normal);
+			cursor: pointer;
+			padding: 4px 8px;
+			border-radius: 3px;
+			transition: all 0.15s ease;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 300px;
 		}
 
 		.ai-chat-toolbar-button {
-			width: 22px;
-			height: 22px;
+			width: 28px;
+			height: 28px;
+			padding: 0;
+			border: none;
+			border-radius: 3px;
+			background: transparent;
+			color: var(--text-muted);
+			cursor: pointer;
+			transition: all 0.15s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 0.7;
 		}
 
 		.ai-chat-toolbar-button svg {
-			width: 13px;
-			height: 13px;
+			width: 16px;
+			height: 16px;
 		}
 
-		/* 消息区域：占据剩余空间 */
 		.ai-chat-messages {
-			padding: 6px;
-			gap: 4px;
 			flex: 1;
-			min-height: 0;
 			overflow-y: auto;
+			padding: 15px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
 		}
 
 		.ai-chat-message {
-			max-width: 90%;
+			max-width: 85%;
 		}
 
-		/* 输入区域：固定在底部 */
 		.ai-chat-input-container {
-			padding: 2px 4px;
-			padding-bottom: 4px;
-			gap: 1px;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			padding: 12px;
+			border-top: 1px solid var(--background-modifier-border);
+			background: var(--background-primary);
 			flex-shrink: 0;
-			border-top-width: 1px;
-			max-height: 89px;
 		}
 
 		.ai-chat-input-toolbar {
-			gap: 2px;
-			padding: 1px 0;
+			display: flex;
+			gap: 6px;
+			align-items: center;
+			padding: 4px 0;
 		}
 
 		.ai-chat-input-toolbar-button {
-			width: 24px;
-			height: 24px;
+			width: 32px;
+			height: 32px;
+			padding: 0;
+			border: 1px solid transparent;
+			border-radius: 6px;
+			background: transparent;
+			color: var(--text-muted);
+			cursor: pointer;
+			transition: all 0.2s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 
 		.ai-chat-input-toolbar-button svg {
-			width: 15px;
-			height: 15px;
+			width: 18px;
+			height: 18px;
 		}
 
 		.ai-chat-input-wrapper {
-			gap: 3px;
+			display: flex;
+			gap: 8px;
+			align-items: center;
 		}
 
 		.ai-chat-input {
-			height: 30px;
-			padding: 0 6px;
+			flex: 1;
+			height: 40px;
+			padding: 0 12px;
+			border: 1px solid var(--background-modifier-border);
+			border-radius: 6px;
+			background: var(--background-primary);
+			color: var(--text-normal);
 			font-size: 14px;
+			font-family: inherit;
+		}
+
+		.ai-chat-input:focus {
+			outline: none;
+			border-color: var(--interactive-accent);
 		}
 
 		.ai-chat-send-button {
-			height: 30px;
-			padding: 5px 10px;
-			font-size: 12px;
-		}
-
-		.ai-chat-context-file-tag {
-			padding: 2px 4px;
-			font-size: 11px;
-			gap: 2px;
-		}
-
-		.ai-chat-context-file-name {
-			max-width: 130px;
-		}
-
-		.ai-chat-context-file-close {
-			width: 13px;
-			height: 13px;
-		}
-
-		.ai-chat-context-file-close svg {
-			width: 11px;
-			height: 11px;
+			padding: 10px 24px;
+			height: 40px;
+			border: none;
+			border-radius: 6px;
+			background: var(--interactive-accent);
+			color: var(--text-on-accent);
+			font-size: 14px;
+			font-weight: 500;
+			cursor: pointer;
+			transition: all 0.2s;
 		}
 	}
 `;
