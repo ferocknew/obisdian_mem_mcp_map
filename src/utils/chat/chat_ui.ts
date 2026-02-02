@@ -414,29 +414,95 @@ export class ChatUIManager {
 
 	/**
 	 * 设置移动端键盘处理
-	 * 由于无法检测键盘状态，采用简化方案：
-	 * 输入框获得焦点时，滚动消息区域到底部
+	 * 使用 Visual Viewport API 监听键盘显示/隐藏
+	 * 当键盘关闭时,恢复输入框位置
 	 */
 	private setupMobileKeyboardHandling(): void {
-		const { Notice } = require('obsidian');
-
 		// 检测是否为移动设备
 		const isMobile = window.innerWidth <= 768;
-
 		if (!isMobile) return;
 
 		const input = this.ui.input;
+		const inputContainer = this.ui.inputContainer;
 		const messagesContainer = this.ui.messagesContainer;
 
-		// 输入框获得焦点时，滚动消息区域到底部
-		input.addEventListener('focus', () => {
-			new Notice('输入框获得焦点，滚动到底部', 2000);
-			setTimeout(() => {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
-			}, 300);
-		});
+		// 方案1: 使用 Visual Viewport API (推荐)
+		if (window.visualViewport) {
+			let initialViewportHeight = window.visualViewport.height;
+			let isKeyboardOpen = false;
 
-		new Notice('移动端：使用简化策略');
+			const handleViewportResize = () => {
+				const currentHeight = window.visualViewport!.height;
+				const heightDifference = initialViewportHeight - currentHeight;
+
+				// 键盘弹出的阈值(高度减少超过100px认为是键盘弹出)
+				const keyboardThreshold = 100;
+
+				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
+					// 键盘弹出
+					isKeyboardOpen = true;
+					console.log('[Keyboard] 键盘弹出, 视口高度变化:', heightDifference);
+					
+					// 滚动消息容器到底部
+					setTimeout(() => {
+						messagesContainer.scrollTop = messagesContainer.scrollHeight;
+					}, 100);
+				} else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
+					// 键盘关闭
+					isKeyboardOpen = false;
+					console.log('[Keyboard] 键盘关闭, 恢复布局');
+					
+					// 恢复输入容器位置(确保在底部)
+					setTimeout(() => {
+						// 滚动到底部,确保输入框可见
+						inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+					}, 100);
+				}
+			};
+
+			// 监听视口大小变化
+			window.visualViewport.addEventListener('resize', handleViewportResize);
+
+			// 更新初始高度(处理屏幕旋转等情况)
+			window.visualViewport.addEventListener('scroll', () => {
+				if (!isKeyboardOpen) {
+					initialViewportHeight = window.visualViewport!.height;
+				}
+			});
+
+			console.log('[Keyboard] 使用 Visual Viewport API 监听键盘状态');
+		} else {
+			// 方案2: 降级方案 - 使用 window.resize
+			let initialWindowHeight = window.innerHeight;
+			let isKeyboardOpen = false;
+
+			const handleWindowResize = () => {
+				const currentHeight = window.innerHeight;
+				const heightDifference = initialWindowHeight - currentHeight;
+				const keyboardThreshold = 100;
+
+				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
+					// 键盘弹出
+					isKeyboardOpen = true;
+					console.log('[Keyboard] 键盘弹出 (降级方案)');
+					
+					setTimeout(() => {
+						messagesContainer.scrollTop = messagesContainer.scrollHeight;
+					}, 100);
+				} else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
+					// 键盘关闭
+					isKeyboardOpen = false;
+					console.log('[Keyboard] 键盘关闭 (降级方案)');
+					
+					setTimeout(() => {
+						inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+					}, 100);
+				}
+			};
+
+			window.addEventListener('resize', handleWindowResize);
+			console.log('[Keyboard] 使用 window.resize 降级方案');
+		}
 	}
 
 	/**

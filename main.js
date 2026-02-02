@@ -3746,22 +3746,67 @@ var _ChatUIManager = class _ChatUIManager {
   }
   /**
    * 设置移动端键盘处理
-   * 由于无法检测键盘状态，采用简化方案：
-   * 输入框获得焦点时，滚动消息区域到底部
+   * 使用 Visual Viewport API 监听键盘显示/隐藏
+   * 当键盘关闭时,恢复输入框位置
    */
   setupMobileKeyboardHandling() {
-    const { Notice: Notice10 } = require("obsidian");
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
     const input = this.ui.input;
+    const inputContainer = this.ui.inputContainer;
     const messagesContainer = this.ui.messagesContainer;
-    input.addEventListener("focus", () => {
-      new Notice10("\u8F93\u5165\u6846\u83B7\u5F97\u7126\u70B9\uFF0C\u6EDA\u52A8\u5230\u5E95\u90E8", 2e3);
-      setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }, 300);
-    });
-    new Notice10("\u79FB\u52A8\u7AEF\uFF1A\u4F7F\u7528\u7B80\u5316\u7B56\u7565");
+    if (window.visualViewport) {
+      let initialViewportHeight = window.visualViewport.height;
+      let isKeyboardOpen = false;
+      const handleViewportResize = /* @__PURE__ */ __name(() => {
+        const currentHeight = window.visualViewport.height;
+        const heightDifference = initialViewportHeight - currentHeight;
+        const keyboardThreshold = 100;
+        if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
+          isKeyboardOpen = true;
+          console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA, \u89C6\u53E3\u9AD8\u5EA6\u53D8\u5316:", heightDifference);
+          setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }, 100);
+        } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
+          isKeyboardOpen = false;
+          console.log("[Keyboard] \u952E\u76D8\u5173\u95ED, \u6062\u590D\u5E03\u5C40");
+          setTimeout(() => {
+            inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
+          }, 100);
+        }
+      }, "handleViewportResize");
+      window.visualViewport.addEventListener("resize", handleViewportResize);
+      window.visualViewport.addEventListener("scroll", () => {
+        if (!isKeyboardOpen) {
+          initialViewportHeight = window.visualViewport.height;
+        }
+      });
+      console.log("[Keyboard] \u4F7F\u7528 Visual Viewport API \u76D1\u542C\u952E\u76D8\u72B6\u6001");
+    } else {
+      let initialWindowHeight = window.innerHeight;
+      let isKeyboardOpen = false;
+      const handleWindowResize = /* @__PURE__ */ __name(() => {
+        const currentHeight = window.innerHeight;
+        const heightDifference = initialWindowHeight - currentHeight;
+        const keyboardThreshold = 100;
+        if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
+          isKeyboardOpen = true;
+          console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA (\u964D\u7EA7\u65B9\u6848)");
+          setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }, 100);
+        } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
+          isKeyboardOpen = false;
+          console.log("[Keyboard] \u952E\u76D8\u5173\u95ED (\u964D\u7EA7\u65B9\u6848)");
+          setTimeout(() => {
+            inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
+          }, 100);
+        }
+      }, "handleWindowResize");
+      window.addEventListener("resize", handleWindowResize);
+      console.log("[Keyboard] \u4F7F\u7528 window.resize \u964D\u7EA7\u65B9\u6848");
+    }
   }
   /**
    * 获取样式
