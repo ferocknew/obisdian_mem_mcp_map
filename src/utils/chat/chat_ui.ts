@@ -414,7 +414,8 @@ export class ChatUIManager {
 
 	/**
 	 * 设置移动端键盘处理
-	 * 在移动端，当键盘弹起时，调整输入区域使其紧贴键盘
+	 * 由于无法检测键盘状态，采用简化方案：
+	 * 输入框获得焦点时，滚动消息区域到底部
 	 */
 	private setupMobileKeyboardHandling(): void {
 		const { Notice } = require('obsidian');
@@ -425,50 +426,17 @@ export class ChatUIManager {
 		if (!isMobile) return;
 
 		const input = this.ui.input;
-		const container = this.ui.container;
+		const messagesContainer = this.ui.messagesContainer;
 
-		// 使用 document.documentElement.clientHeight
-		const initialClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-		new Notice(`初始 clientHeight: ${initialClientHeight}`, 5000);
+		// 输入框获得焦点时，滚动消息区域到底部
+		input.addEventListener('focus', () => {
+			new Notice('输入框获得焦点，滚动到底部', 2000);
+			setTimeout(() => {
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}, 300);
+		});
 
-		let lastClientHeight = initialClientHeight;
-		let checkCount = 0;
-		let keyboardOpen = false;
-
-		// 使用定时器轮询
-		setInterval(() => {
-			checkCount++;
-			const currentClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-			const diff = currentClientHeight - lastClientHeight;
-
-			// 每 10 次检查显示一次当前状态（每 5 秒）
-			if (checkCount % 10 === 0) {
-				new Notice(`检查 #${checkCount}: clientHeight=${currentClientHeight}, 差值=${diff.toFixed(0)}`, 2000);
-			}
-
-			// 高度变化超过 50px 就认为是键盘状态变化
-			if (Math.abs(diff) > 50) {
-				new Notice(`*** 检测到变化 ***\n从: ${lastClientHeight}\n到: ${currentClientHeight}\n差值: ${diff.toFixed(0)}`, 4000);
-
-				if (diff < 0) {
-					// 高度减小 → 键盘弹起
-					if (!keyboardOpen) {
-						keyboardOpen = true;
-						new Notice('>>> 键盘弹起 <<<', 3000);
-					}
-				} else {
-					// 高度增加 → 键盘收起
-					if (keyboardOpen) {
-						keyboardOpen = false;
-						new Notice('>>> 键盘收起 <<<', 3000);
-					}
-				}
-
-				lastClientHeight = currentClientHeight;
-			}
-		}, 500); // 每 500ms 检查一次
-
-		new Notice('移动端键盘监听已启动\n每 5 秒显示一次状态', 4000);
+		new Notice('移动端：使用简化策略');
 	}
 
 	/**

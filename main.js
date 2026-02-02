@@ -3303,8 +3303,8 @@ var chatViewStyles = `
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
-			/* \u9650\u5236\u6700\u5927\u9AD8\u5EA6\uFF0C\u4E3A Obsidian \u5E95\u90E8\u5DE5\u5177\u680F\u9884\u7559\u8DB3\u591F\u7A7A\u95F4 */
-			max-height: 575px;
+			/* \u9650\u5236\u6700\u5927\u9AD8\u5EA6\uFF0C\u4E3A\u952E\u76D8\u548C Obsidian \u5E95\u90E8\u5DE5\u5177\u680F\u9884\u7559\u8DB3\u591F\u7A7A\u95F4 */
+			max-height: 500px;
 			overflow: hidden;
 		}
 
@@ -3721,46 +3721,22 @@ var _ChatUIManager = class _ChatUIManager {
   }
   /**
    * 设置移动端键盘处理
-   * 在移动端，当键盘弹起时，调整输入区域使其紧贴键盘
+   * 由于无法检测键盘状态，采用简化方案：
+   * 输入框获得焦点时，滚动消息区域到底部
    */
   setupMobileKeyboardHandling() {
     const { Notice: Notice10 } = require("obsidian");
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
     const input = this.ui.input;
-    const container = this.ui.container;
-    const initialClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-    new Notice10(`\u521D\u59CB clientHeight: ${initialClientHeight}`, 5e3);
-    let lastClientHeight = initialClientHeight;
-    let checkCount = 0;
-    let keyboardOpen = false;
-    setInterval(() => {
-      checkCount++;
-      const currentClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-      const diff = currentClientHeight - lastClientHeight;
-      if (checkCount % 10 === 0) {
-        new Notice10(`\u68C0\u67E5 #${checkCount}: clientHeight=${currentClientHeight}, \u5DEE\u503C=${diff.toFixed(0)}`, 2e3);
-      }
-      if (Math.abs(diff) > 50) {
-        new Notice10(`*** \u68C0\u6D4B\u5230\u53D8\u5316 ***
-\u4ECE: ${lastClientHeight}
-\u5230: ${currentClientHeight}
-\u5DEE\u503C: ${diff.toFixed(0)}`, 4e3);
-        if (diff < 0) {
-          if (!keyboardOpen) {
-            keyboardOpen = true;
-            new Notice10(">>> \u952E\u76D8\u5F39\u8D77 <<<", 3e3);
-          }
-        } else {
-          if (keyboardOpen) {
-            keyboardOpen = false;
-            new Notice10(">>> \u952E\u76D8\u6536\u8D77 <<<", 3e3);
-          }
-        }
-        lastClientHeight = currentClientHeight;
-      }
-    }, 500);
-    new Notice10("\u79FB\u52A8\u7AEF\u952E\u76D8\u76D1\u542C\u5DF2\u542F\u52A8\n\u6BCF 5 \u79D2\u663E\u793A\u4E00\u6B21\u72B6\u6001", 4e3);
+    const messagesContainer = this.ui.messagesContainer;
+    input.addEventListener("focus", () => {
+      new Notice10("\u8F93\u5165\u6846\u83B7\u5F97\u7126\u70B9\uFF0C\u6EDA\u52A8\u5230\u5E95\u90E8", 2e3);
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 300);
+    });
+    new Notice10("\u79FB\u52A8\u7AEF\uFF1A\u4F7F\u7528\u7B80\u5316\u7B56\u7565");
   }
   /**
    * 获取样式
