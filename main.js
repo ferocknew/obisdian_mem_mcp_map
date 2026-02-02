@@ -3729,40 +3729,30 @@ var _ChatUIManager = class _ChatUIManager {
     if (!isMobile) return;
     const input = this.ui.input;
     const container = this.ui.container;
-    const state = {
-      keyboardOpen: false,
-      originalHeight: "575px"
-    };
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    new Notice10(`\u79FB\u52A8\u7AEF: ${isIOS ? "iOS" : "Android"}`);
-    if (isIOS) {
-      new Notice10("\u4F7F\u7528 iOS \u952E\u76D8\u68C0\u6D4B");
-      window.addEventListener("focusin", () => {
-        new Notice10("[iOS] focusin - \u952E\u76D8\u5F39\u8D77");
-        state.keyboardOpen = true;
-      });
-      window.addEventListener("focusout", () => {
-        new Notice10("[iOS] focusout - \u952E\u76D8\u6536\u8D77");
-        state.keyboardOpen = false;
-      });
-    } else {
-      new Notice10("\u4F7F\u7528 Android \u952E\u76D8\u68C0\u6D4B");
-      const innerHeight = window.innerHeight;
-      new Notice10(`\u521D\u59CB\u7A97\u53E3\u9AD8\u5EA6: ${innerHeight}`);
-      window.addEventListener("resize", () => {
-        const newInnerHeight = window.innerHeight;
-        new Notice10(`[Android] resize \u4E8B\u4EF6: ${newInnerHeight}`);
-        if (innerHeight > newInnerHeight) {
-          new Notice10(`[Android] \u952E\u76D8\u5F39\u8D77 (${newInnerHeight} < ${innerHeight})`);
-          state.keyboardOpen = true;
+    const initialClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
+    new Notice10(`\u521D\u59CB clientHeight: ${initialClientHeight}`);
+    let lastClientHeight = initialClientHeight;
+    let keyboardOpen = false;
+    setInterval(() => {
+      const currentClientHeight = document.documentElement.clientHeight || document.body.clientHeight;
+      const diff = Math.abs(currentClientHeight - lastClientHeight);
+      if (diff > 100) {
+        new Notice10(`clientHeight \u53D8\u5316: ${lastClientHeight} -> ${currentClientHeight} (\u5DEE\u503C: ${diff})`, 2e3);
+        if (currentClientHeight < lastClientHeight) {
+          if (!keyboardOpen) {
+            keyboardOpen = true;
+            new Notice10("\u952E\u76D8\u5F39\u8D77");
+          }
         } else {
-          new Notice10(`[Android] \u952E\u76D8\u6536\u8D77 (${newInnerHeight} >= ${innerHeight})`);
-          state.keyboardOpen = false;
+          if (keyboardOpen) {
+            keyboardOpen = false;
+            new Notice10("\u952E\u76D8\u6536\u8D77");
+          }
         }
-      });
-    }
-    new Notice10("\u79FB\u52A8\u7AEF\u952E\u76D8\u76D1\u542C\u5DF2\u542F\u52A8");
+        lastClientHeight = currentClientHeight;
+      }
+    }, 500);
+    new Notice10("\u79FB\u52A8\u7AEF\u952E\u76D8\u76D1\u542C\u5DF2\u542F\u52A8\uFF08clientHeight \u8F6E\u8BE2\uFF09");
   }
   /**
    * 获取样式
