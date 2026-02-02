@@ -3759,80 +3759,145 @@ var _ChatUIManager = class _ChatUIManager {
     const input = this.ui.input;
     const inputContainer = this.ui.inputContainer;
     const messagesContainer = this.ui.messagesContainer;
+    let pollingTimer = null;
+    let isKeyboardOpen = false;
+    let pollCount = 0;
+    const getHeight = /* @__PURE__ */ __name(() => window.visualViewport ? window.visualViewport.height : window.innerHeight, "getHeight");
+    let initialHeight = getHeight();
+    const threshold = 100;
+    new Notice10(`\u{1F4F1} \u8F6E\u8BE2\u6A21\u5F0F\u542F\u52A8, \u521D\u59CB\u9AD8\u5EA6: ${initialHeight}px`, 3e3);
     input.addEventListener("focus", () => {
-      new Notice10("\u{1F535} \u8F93\u5165\u6846\u83B7\u5F97\u7126\u70B9 (focus)", 2e3);
+      new Notice10("\u{1F535} \u7126\u70B9-\u5F00\u59CB\u8F6E\u8BE2", 2e3);
+      if (pollingTimer) clearInterval(pollingTimer);
+      pollCount = 0;
+      pollingTimer = setInterval(() => {
+        pollCount++;
+        const currentHeight = getHeight();
+        const diff = initialHeight - currentHeight;
+        if (pollCount % 10 === 0) {
+          new Notice10(`\u{1F504}#${pollCount} \u5F53\u524D:${currentHeight} \u521D\u59CB:${initialHeight} \u5DEE\u5F02:${diff} \u952E\u76D8:${isKeyboardOpen ? "\u5F00" : "\u5173"}`, 2500);
+        }
+        if (diff > threshold && !isKeyboardOpen) {
+          isKeyboardOpen = true;
+          new Notice10(`\u2705 \u68C0\u6D4B\u5230\u952E\u76D8\u5F39\u51FA! \u5DEE\u5F02${diff}px`, 3e3);
+          setTimeout(() => messagesContainer.scrollTop = messagesContainer.scrollHeight, 100);
+        } else if (diff <= threshold && isKeyboardOpen) {
+          isKeyboardOpen = false;
+          new Notice10(`\u2705 \u68C0\u6D4B\u5230\u952E\u76D8\u5173\u95ED! \u6062\u590D\u4F4D\u7F6E(\u5DEE\u5F02${diff}px)`, 3e3);
+          setTimeout(() => inputContainer.scrollIntoView({ behavior: "smooth", block: "end" }), 100);
+        }
+      }, 300);
     });
     input.addEventListener("blur", () => {
-      new Notice10("\u{1F534} \u8F93\u5165\u6846\u5931\u53BB\u7126\u70B9 (blur)", 2e3);
+      new Notice10("\u{1F534} \u5931\u7126-\u505C\u6B62\u8F6E\u8BE2", 2e3);
+      if (pollingTimer) {
+        clearInterval(pollingTimer);
+        pollingTimer = null;
+      }
+      isKeyboardOpen = false;
+      initialHeight = getHeight();
+      pollCount = 0;
     });
-    if (window.visualViewport) {
-      let initialViewportHeight = window.visualViewport.height;
-      let isKeyboardOpen = false;
-      let resizeCount = 0;
-      new Notice10(`Visual Viewport API \u53EF\u7528, \u521D\u59CB\u9AD8\u5EA6: ${initialViewportHeight}px`, 3e3);
-      const handleViewportResize = /* @__PURE__ */ __name(() => {
-        resizeCount++;
-        const currentHeight = window.visualViewport.height;
-        const heightDifference = initialViewportHeight - currentHeight;
-        const keyboardThreshold = 100;
-        new Notice10(`\u{1F504}#${resizeCount} \u89C6\u53E3: ${currentHeight}px, \u521D\u59CB: ${initialViewportHeight}px, \u5DEE\u5F02: ${heightDifference}px, \u72B6\u6001: ${isKeyboardOpen ? "\u5F00" : "\u5173"}`, 3e3);
-        if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
-          isKeyboardOpen = true;
-          console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA, \u89C6\u53E3\u9AD8\u5EA6\u53D8\u5316:", heightDifference);
-          new Notice10(`\u2705 \u952E\u76D8\u5F39\u51FA! \u9AD8\u5EA6\u51CF\u5C11 ${heightDifference}px`, 3e3);
-          setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }, 100);
-        } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
-          isKeyboardOpen = false;
-          console.log("[Keyboard] \u952E\u76D8\u5173\u95ED, \u6062\u590D\u5E03\u5C40");
-          new Notice10(`\u2705 \u952E\u76D8\u5173\u95ED! \u6062\u590D\u8F93\u5165\u6846 (\u5DEE\u5F02:${heightDifference})`, 3e3);
-          setTimeout(() => {
-            inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
-          }, 100);
-        } else {
-          new Notice10(`\u26A0\uFE0F \u672A\u89E6\u53D1 - \u9608\u503C:${keyboardThreshold} \u5DEE\u5F02:${heightDifference} \u72B6\u6001:${isKeyboardOpen ? "\u5F00" : "\u5173"}`, 2500);
-        }
-      }, "handleViewportResize");
-      window.visualViewport.addEventListener("resize", handleViewportResize);
-      window.visualViewport.addEventListener("scroll", () => {
-        if (!isKeyboardOpen) {
-          initialViewportHeight = window.visualViewport.height;
-        }
-      });
-      console.log("[Keyboard] \u4F7F\u7528 Visual Viewport API \u76D1\u542C\u952E\u76D8\u72B6\u6001");
-    } else {
-      let initialWindowHeight = window.innerHeight;
-      let isKeyboardOpen = false;
-      new Notice10(`\u964D\u7EA7\u65B9\u6848: window.resize, \u521D\u59CB\u9AD8\u5EA6: ${initialWindowHeight}px`, 3e3);
-      const handleWindowResize = /* @__PURE__ */ __name(() => {
-        const currentHeight = window.innerHeight;
-        const heightDifference = initialWindowHeight - currentHeight;
-        const keyboardThreshold = 100;
-        new Notice10(`\u7A97\u53E3\u53D8\u5316: ${currentHeight}px, \u5DEE\u5F02: ${heightDifference}px`, 2e3);
-        if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
-          isKeyboardOpen = true;
-          console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA (\u964D\u7EA7\u65B9\u6848)");
-          new Notice10(`\u2705 \u952E\u76D8\u5F39\u51FA (\u964D\u7EA7)! \u9AD8\u5EA6\u51CF\u5C11 ${heightDifference}px`, 3e3);
-          setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }, 100);
-        } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
-          isKeyboardOpen = false;
-          console.log("[Keyboard] \u952E\u76D8\u5173\u95ED (\u964D\u7EA7\u65B9\u6848)");
-          new Notice10(`\u2705 \u952E\u76D8\u5173\u95ED (\u964D\u7EA7)! \u6062\u590D\u8F93\u5165\u6846\u4F4D\u7F6E`, 3e3);
-          setTimeout(() => {
-            inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
-          }, 100);
-        }
-      }, "handleWindowResize");
-      window.addEventListener("resize", handleWindowResize);
-      console.log("[Keyboard] \u4F7F\u7528 window.resize \u964D\u7EA7\u65B9\u6848");
-    }
+    console.log("[Keyboard] \u4F7F\u7528\u5B9A\u65F6\u8F6E\u8BE2\u6A21\u5F0F(300ms)");
   }
   /**
-   * 获取样式
-   */
+  			let initialViewportHeight = window.visualViewport.height;
+  			let isKeyboardOpen = false;
+  			let resizeCount = 0;
+  
+  			new Notice(`Visual Viewport API 可用, 初始高度: ${initialViewportHeight}px`, 3000);
+  
+  			const handleViewportResize = () => {
+  				resizeCount++;
+  				const currentHeight = window.visualViewport!.height;
+  				const heightDifference = initialViewportHeight - currentHeight;
+  
+  				// 键盘弹出的阈值(高度减少超过100px认为是键盘弹出)
+  				const keyboardThreshold = 100;
+  
+  				new Notice(`🔄#${resizeCount} 视口: ${currentHeight}px, 初始: ${initialViewportHeight}px, 差异: ${heightDifference}px, 状态: ${isKeyboardOpen ? '开' : '关'}`, 3000);
+  
+  				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
+  					// 键盘弹出
+  					isKeyboardOpen = true;
+  					console.log('[Keyboard] 键盘弹出, 视口高度变化:', heightDifference);
+  					new Notice(`✅ 键盘弹出! 高度减少 ${heightDifference}px`, 3000);
+  
+  					// 滚动消息容器到底部
+  					setTimeout(() => {
+  						messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  					}, 100);
+  				} else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
+  					// 键盘关闭
+  					isKeyboardOpen = false;
+  					console.log('[Keyboard] 键盘关闭, 恢复布局');
+  					new Notice(`✅ 键盘关闭! 恢复输入框 (差异:${heightDifference})`, 3000);
+  
+  					// 恢复输入容器位置(确保在底部)
+  					setTimeout(() => {
+  						// 滚动到底部,确保输入框可见
+  						inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  					}, 100);
+  				} else {
+  					// 调试: 显示未触发条件的原因
+  					new Notice(`⚠️ 未触发 - 阈值:${keyboardThreshold} 差异:${heightDifference} 状态:${isKeyboardOpen ? '开' : '关'}`, 2500);
+  				}
+  			};
+  
+  			// 监听视口大小变化
+  			window.visualViewport.addEventListener('resize', handleViewportResize);
+  
+  			// 更新初始高度(处理屏幕旋转等情况)
+  			window.visualViewport.addEventListener('scroll', () => {
+  				if (!isKeyboardOpen) {
+  					initialViewportHeight = window.visualViewport!.height;
+  				}
+  			});
+  
+  			console.log('[Keyboard] 使用 Visual Viewport API 监听键盘状态');
+  		} else {
+  			// 方案2: 降级方案 - 使用 window.resize
+  			let initialWindowHeight = window.innerHeight;
+  			let isKeyboardOpen = false;
+  
+  			new Notice(`降级方案: window.resize, 初始高度: ${initialWindowHeight}px`, 3000);
+  
+  			const handleWindowResize = () => {
+  				const currentHeight = window.innerHeight;
+  				const heightDifference = initialWindowHeight - currentHeight;
+  				const keyboardThreshold = 100;
+  
+  				new Notice(`窗口变化: ${currentHeight}px, 差异: ${heightDifference}px`, 2000);
+  
+  				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
+  					// 键盘弹出
+  					isKeyboardOpen = true;
+  					console.log('[Keyboard] 键盘弹出 (降级方案)');
+  					new Notice(`✅ 键盘弹出 (降级)! 高度减少 ${heightDifference}px`, 3000);
+  
+  					setTimeout(() => {
+  						messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  					}, 100);
+  				} else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
+  					// 键盘关闭
+  					isKeyboardOpen = false;
+  					console.log('[Keyboard] 键盘关闭 (降级方案)');
+  					new Notice(`✅ 键盘关闭 (降级)! 恢复输入框位置`, 3000);
+  
+  					setTimeout(() => {
+  						inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  					}, 100);
+  				}
+  			};
+  
+  			window.addEventListener('resize', handleWindowResize);
+  			console.log('[Keyboard] 使用 window.resize 降级方案');
+  		}
+  	}
+  
+  	/**
+  	 * 获取样式
+  	 */
   static getStyles() {
     return chatViewStyles;
   }

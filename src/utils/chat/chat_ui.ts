@@ -432,17 +432,64 @@ export class ChatUIManager {
 		const inputContainer = this.ui.inputContainer;
 		const messagesContainer = this.ui.messagesContainer;
 
-		// 添加基础的 focus/blur 事件监听 (用于调试)
+		// 定时轮询方案:定期检查视口高度变化
+		let pollingTimer: NodeJS.Timeout | null = null;
+		let isKeyboardOpen = false;
+		let pollCount = 0;
+
+		const getHeight = () => window.visualViewport ? window.visualViewport.height : window.innerHeight;
+		let initialHeight = getHeight();
+		const threshold = 100;
+
+		new Notice(`📱 轮询模式启动, 初始高度: ${initialHeight}px`, 3000);
+
+		// focus时启动轮询
 		input.addEventListener('focus', () => {
-			new Notice('🔵 输入框获得焦点 (focus)', 2000);
+			new Notice('🔵 焦点-开始轮询', 2000);
+			if (pollingTimer) clearInterval(pollingTimer);
+
+			pollCount = 0;
+			pollingTimer = setInterval(() => {
+				pollCount++;
+				const currentHeight = getHeight();
+				const diff = initialHeight - currentHeight;
+
+				// 每10次(3秒)显示一次状态
+				if (pollCount % 10 === 0) {
+					new Notice(`🔄#${pollCount} 当前:${currentHeight} 初始:${initialHeight} 差异:${diff} 键盘:${isKeyboardOpen ? '开' : '关'}`, 2500);
+				}
+
+				// 检测键盘弹出
+				if (diff > threshold && !isKeyboardOpen) {
+					isKeyboardOpen = true;
+					new Notice(`✅ 检测到键盘弹出! 差异${diff}px`, 3000);
+					setTimeout(() => messagesContainer.scrollTop = messagesContainer.scrollHeight, 100);
+				}
+				// 检测键盘关闭
+				else if (diff <= threshold && isKeyboardOpen) {
+					isKeyboardOpen = false;
+					new Notice(`✅ 检测到键盘关闭! 恢复位置(差异${diff}px)`, 3000);
+					setTimeout(() => inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100);
+				}
+			}, 300);
 		});
 
+		// blur时停止轮询
 		input.addEventListener('blur', () => {
-			new Notice('🔴 输入框失去焦点 (blur)', 2000);
+			new Notice('🔴 失焦-停止轮询', 2000);
+			if (pollingTimer) {
+				clearInterval(pollingTimer);
+				pollingTimer = null;
+			}
+			isKeyboardOpen = false;
+			initialHeight = getHeight();
+			pollCount = 0;
 		});
 
-		// 方案1: 使用 Visual Viewport API (推荐)
-		if (window.visualViewport) {
+		console.log('[Keyboard] 使用定时轮询模式(300ms)');
+	}
+
+	/**
 			let initialViewportHeight = window.visualViewport.height;
 			let isKeyboardOpen = false;
 			let resizeCount = 0;
