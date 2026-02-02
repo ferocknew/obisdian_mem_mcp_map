@@ -3750,27 +3750,35 @@ var _ChatUIManager = class _ChatUIManager {
    * 当键盘关闭时,恢复输入框位置
    */
   setupMobileKeyboardHandling() {
+    const { Notice: Notice10 } = require("obsidian");
     const isMobile = window.innerWidth <= 768;
-    if (!isMobile) return;
+    if (!isMobile) {
+      new Notice10("\u975E\u79FB\u52A8\u8BBE\u5907,\u8DF3\u8FC7\u952E\u76D8\u76D1\u542C");
+      return;
+    }
     const input = this.ui.input;
     const inputContainer = this.ui.inputContainer;
     const messagesContainer = this.ui.messagesContainer;
     if (window.visualViewport) {
       let initialViewportHeight = window.visualViewport.height;
       let isKeyboardOpen = false;
+      new Notice10(`Visual Viewport API \u53EF\u7528, \u521D\u59CB\u9AD8\u5EA6: ${initialViewportHeight}px`, 3e3);
       const handleViewportResize = /* @__PURE__ */ __name(() => {
         const currentHeight = window.visualViewport.height;
         const heightDifference = initialViewportHeight - currentHeight;
         const keyboardThreshold = 100;
+        new Notice10(`\u89C6\u53E3\u53D8\u5316: ${currentHeight}px, \u5DEE\u5F02: ${heightDifference}px`, 2e3);
         if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
           isKeyboardOpen = true;
           console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA, \u89C6\u53E3\u9AD8\u5EA6\u53D8\u5316:", heightDifference);
+          new Notice10(`\u2705 \u952E\u76D8\u5F39\u51FA! \u9AD8\u5EA6\u51CF\u5C11 ${heightDifference}px`, 3e3);
           setTimeout(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }, 100);
         } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
           isKeyboardOpen = false;
           console.log("[Keyboard] \u952E\u76D8\u5173\u95ED, \u6062\u590D\u5E03\u5C40");
+          new Notice10(`\u2705 \u952E\u76D8\u5173\u95ED! \u6062\u590D\u8F93\u5165\u6846\u4F4D\u7F6E`, 3e3);
           setTimeout(() => {
             inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
           }, 100);
@@ -3786,19 +3794,23 @@ var _ChatUIManager = class _ChatUIManager {
     } else {
       let initialWindowHeight = window.innerHeight;
       let isKeyboardOpen = false;
+      new Notice10(`\u964D\u7EA7\u65B9\u6848: window.resize, \u521D\u59CB\u9AD8\u5EA6: ${initialWindowHeight}px`, 3e3);
       const handleWindowResize = /* @__PURE__ */ __name(() => {
         const currentHeight = window.innerHeight;
         const heightDifference = initialWindowHeight - currentHeight;
         const keyboardThreshold = 100;
+        new Notice10(`\u7A97\u53E3\u53D8\u5316: ${currentHeight}px, \u5DEE\u5F02: ${heightDifference}px`, 2e3);
         if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
           isKeyboardOpen = true;
           console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA (\u964D\u7EA7\u65B9\u6848)");
+          new Notice10(`\u2705 \u952E\u76D8\u5F39\u51FA (\u964D\u7EA7)! \u9AD8\u5EA6\u51CF\u5C11 ${heightDifference}px`, 3e3);
           setTimeout(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }, 100);
         } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
           isKeyboardOpen = false;
           console.log("[Keyboard] \u952E\u76D8\u5173\u95ED (\u964D\u7EA7\u65B9\u6848)");
+          new Notice10(`\u2705 \u952E\u76D8\u5173\u95ED (\u964D\u7EA7)! \u6062\u590D\u8F93\u5165\u6846\u4F4D\u7F6E`, 3e3);
           setTimeout(() => {
             inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
           }, 100);

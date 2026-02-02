@@ -418,9 +418,15 @@ export class ChatUIManager {
 	 * 当键盘关闭时,恢复输入框位置
 	 */
 	private setupMobileKeyboardHandling(): void {
+		const { Notice } = require('obsidian');
+
 		// 检测是否为移动设备
 		const isMobile = window.innerWidth <= 768;
-		if (!isMobile) return;
+
+		if (!isMobile) {
+			new Notice('非移动设备,跳过键盘监听');
+			return;
+		}
 
 		const input = this.ui.input;
 		const inputContainer = this.ui.inputContainer;
@@ -431,6 +437,8 @@ export class ChatUIManager {
 			let initialViewportHeight = window.visualViewport.height;
 			let isKeyboardOpen = false;
 
+			new Notice(`Visual Viewport API 可用, 初始高度: ${initialViewportHeight}px`, 3000);
+
 			const handleViewportResize = () => {
 				const currentHeight = window.visualViewport!.height;
 				const heightDifference = initialViewportHeight - currentHeight;
@@ -438,11 +446,14 @@ export class ChatUIManager {
 				// 键盘弹出的阈值(高度减少超过100px认为是键盘弹出)
 				const keyboardThreshold = 100;
 
+				new Notice(`视口变化: ${currentHeight}px, 差异: ${heightDifference}px`, 2000);
+
 				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
 					// 键盘弹出
 					isKeyboardOpen = true;
 					console.log('[Keyboard] 键盘弹出, 视口高度变化:', heightDifference);
-					
+					new Notice(`✅ 键盘弹出! 高度减少 ${heightDifference}px`, 3000);
+
 					// 滚动消息容器到底部
 					setTimeout(() => {
 						messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -451,7 +462,8 @@ export class ChatUIManager {
 					// 键盘关闭
 					isKeyboardOpen = false;
 					console.log('[Keyboard] 键盘关闭, 恢复布局');
-					
+					new Notice(`✅ 键盘关闭! 恢复输入框位置`, 3000);
+
 					// 恢复输入容器位置(确保在底部)
 					setTimeout(() => {
 						// 滚动到底部,确保输入框可见
@@ -476,16 +488,21 @@ export class ChatUIManager {
 			let initialWindowHeight = window.innerHeight;
 			let isKeyboardOpen = false;
 
+			new Notice(`降级方案: window.resize, 初始高度: ${initialWindowHeight}px`, 3000);
+
 			const handleWindowResize = () => {
 				const currentHeight = window.innerHeight;
 				const heightDifference = initialWindowHeight - currentHeight;
 				const keyboardThreshold = 100;
 
+				new Notice(`窗口变化: ${currentHeight}px, 差异: ${heightDifference}px`, 2000);
+
 				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
 					// 键盘弹出
 					isKeyboardOpen = true;
 					console.log('[Keyboard] 键盘弹出 (降级方案)');
-					
+					new Notice(`✅ 键盘弹出 (降级)! 高度减少 ${heightDifference}px`, 3000);
+
 					setTimeout(() => {
 						messagesContainer.scrollTop = messagesContainer.scrollHeight;
 					}, 100);
@@ -493,7 +510,8 @@ export class ChatUIManager {
 					// 键盘关闭
 					isKeyboardOpen = false;
 					console.log('[Keyboard] 键盘关闭 (降级方案)');
-					
+					new Notice(`✅ 键盘关闭 (降级)! 恢复输入框位置`, 3000);
+
 					setTimeout(() => {
 						inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
 					}, 100);
