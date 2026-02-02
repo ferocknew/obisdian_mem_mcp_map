@@ -432,21 +432,32 @@ export class ChatUIManager {
 		const inputContainer = this.ui.inputContainer;
 		const messagesContainer = this.ui.messagesContainer;
 
+		// 添加基础的 focus/blur 事件监听 (用于调试)
+		input.addEventListener('focus', () => {
+			new Notice('🔵 输入框获得焦点 (focus)', 2000);
+		});
+
+		input.addEventListener('blur', () => {
+			new Notice('🔴 输入框失去焦点 (blur)', 2000);
+		});
+
 		// 方案1: 使用 Visual Viewport API (推荐)
 		if (window.visualViewport) {
 			let initialViewportHeight = window.visualViewport.height;
 			let isKeyboardOpen = false;
+			let resizeCount = 0;
 
 			new Notice(`Visual Viewport API 可用, 初始高度: ${initialViewportHeight}px`, 3000);
 
 			const handleViewportResize = () => {
+				resizeCount++;
 				const currentHeight = window.visualViewport!.height;
 				const heightDifference = initialViewportHeight - currentHeight;
 
 				// 键盘弹出的阈值(高度减少超过100px认为是键盘弹出)
 				const keyboardThreshold = 100;
 
-				new Notice(`视口变化: ${currentHeight}px, 差异: ${heightDifference}px`, 2000);
+				new Notice(`🔄#${resizeCount} 视口: ${currentHeight}px, 初始: ${initialViewportHeight}px, 差异: ${heightDifference}px, 状态: ${isKeyboardOpen ? '开' : '关'}`, 3000);
 
 				if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
 					// 键盘弹出
@@ -462,13 +473,16 @@ export class ChatUIManager {
 					// 键盘关闭
 					isKeyboardOpen = false;
 					console.log('[Keyboard] 键盘关闭, 恢复布局');
-					new Notice(`✅ 键盘关闭! 恢复输入框位置`, 3000);
+					new Notice(`✅ 键盘关闭! 恢复输入框 (差异:${heightDifference})`, 3000);
 
 					// 恢复输入容器位置(确保在底部)
 					setTimeout(() => {
 						// 滚动到底部,确保输入框可见
 						inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
 					}, 100);
+				} else {
+					// 调试: 显示未触发条件的原因
+					new Notice(`⚠️ 未触发 - 阈值:${keyboardThreshold} 差异:${heightDifference} 状态:${isKeyboardOpen ? '开' : '关'}`, 2500);
 				}
 			};
 

@@ -3759,15 +3759,23 @@ var _ChatUIManager = class _ChatUIManager {
     const input = this.ui.input;
     const inputContainer = this.ui.inputContainer;
     const messagesContainer = this.ui.messagesContainer;
+    input.addEventListener("focus", () => {
+      new Notice10("\u{1F535} \u8F93\u5165\u6846\u83B7\u5F97\u7126\u70B9 (focus)", 2e3);
+    });
+    input.addEventListener("blur", () => {
+      new Notice10("\u{1F534} \u8F93\u5165\u6846\u5931\u53BB\u7126\u70B9 (blur)", 2e3);
+    });
     if (window.visualViewport) {
       let initialViewportHeight = window.visualViewport.height;
       let isKeyboardOpen = false;
+      let resizeCount = 0;
       new Notice10(`Visual Viewport API \u53EF\u7528, \u521D\u59CB\u9AD8\u5EA6: ${initialViewportHeight}px`, 3e3);
       const handleViewportResize = /* @__PURE__ */ __name(() => {
+        resizeCount++;
         const currentHeight = window.visualViewport.height;
         const heightDifference = initialViewportHeight - currentHeight;
         const keyboardThreshold = 100;
-        new Notice10(`\u89C6\u53E3\u53D8\u5316: ${currentHeight}px, \u5DEE\u5F02: ${heightDifference}px`, 2e3);
+        new Notice10(`\u{1F504}#${resizeCount} \u89C6\u53E3: ${currentHeight}px, \u521D\u59CB: ${initialViewportHeight}px, \u5DEE\u5F02: ${heightDifference}px, \u72B6\u6001: ${isKeyboardOpen ? "\u5F00" : "\u5173"}`, 3e3);
         if (heightDifference > keyboardThreshold && !isKeyboardOpen) {
           isKeyboardOpen = true;
           console.log("[Keyboard] \u952E\u76D8\u5F39\u51FA, \u89C6\u53E3\u9AD8\u5EA6\u53D8\u5316:", heightDifference);
@@ -3778,10 +3786,12 @@ var _ChatUIManager = class _ChatUIManager {
         } else if (heightDifference <= keyboardThreshold && isKeyboardOpen) {
           isKeyboardOpen = false;
           console.log("[Keyboard] \u952E\u76D8\u5173\u95ED, \u6062\u590D\u5E03\u5C40");
-          new Notice10(`\u2705 \u952E\u76D8\u5173\u95ED! \u6062\u590D\u8F93\u5165\u6846\u4F4D\u7F6E`, 3e3);
+          new Notice10(`\u2705 \u952E\u76D8\u5173\u95ED! \u6062\u590D\u8F93\u5165\u6846 (\u5DEE\u5F02:${heightDifference})`, 3e3);
           setTimeout(() => {
             inputContainer.scrollIntoView({ behavior: "smooth", block: "end" });
           }, 100);
+        } else {
+          new Notice10(`\u26A0\uFE0F \u672A\u89E6\u53D1 - \u9608\u503C:${keyboardThreshold} \u5DEE\u5F02:${heightDifference} \u72B6\u6001:${isKeyboardOpen ? "\u5F00" : "\u5173"}`, 2500);
         }
       }, "handleViewportResize");
       window.visualViewport.addEventListener("resize", handleViewportResize);
